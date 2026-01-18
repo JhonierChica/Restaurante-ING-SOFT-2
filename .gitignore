@@ -1,0 +1,54 @@
+############################
+# BACKEND - SPRING BOOT
+############################
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
+
+
+##############################
+#raiz
+node_modules/
+frontend/node_modules/
+backend/target/
+dist/
+
+###############################
+
+############################
+# FRONTEND - REACT / VITE
+############################
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+
+############################
+# LOGS
+############################
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+############################
+# SISTEMA OPERATIVO
+############################
+.DS_Store
+Thumbs.db
+
+############################
+# IDEs / EDITORES
+############################
+.vscode/
+.idea/
+*.iml
+
+############################
+# OTROS
+############################
+.env
+
