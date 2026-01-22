@@ -1,0 +1,140 @@
+package com.restaurante.restaurantbackend.modules.payments.service;
+
+import com.restaurante.restaurantbackend.modules.orders.model.Order;
+import com.restaurante.restaurantbackend.modules.orders.repository.OrderRepository;
+import com.restaurante.restaurantbackend.modules.paymentmethods.model.PaymentMethod;
+import com.restaurante.restaurantbackend.modules.paymentmethods.repository.PaymentMethodRepository;
+import com.restaurante.restaurantbackend.modules.payments.dto.CreatePaymentRequest;
+import com.restaurante.restaurantbackend.modules.payments.dto.PaymentResponse;
+import com.restaurante.restaurantbackend.modules.payments.dto.UpdatePaymentRequest;
+import com.restaurante.restaurantbackend.modules.payments.model.Payment;
+import com.restaurante.restaurantbackend.modules.payments.repository.PaymentRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+public class PaymentService {
+
+    private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
+
+    public PaymentService(PaymentRepository paymentRepository,
+                         OrderRepository orderRepository,
+                         PaymentMethodRepository paymentMethodRepository) {
+        this.paymentRepository = paymentRepository;
+        this.orderRepository = orderRepository;
+        this.paymentMethodRepository = paymentMethodRepository;
+    }
+
+    public PaymentResponse createPayment(CreatePaymentRequest request) {
+        // Validar que el pedido existe
+        Order order = orderRepository.findById(request.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + request.getOrderId()));
+
+        // Validar que el método de pago existe
+        PaymentMethod paymentMethod = paymentMethodRepository.findById(request.getPaymentMethodId())
+                .orElseThrow(() -> new RuntimeException("Payment method not found with id: " + request.getPaymentMethodId()));
+
+        // Validar que el método de pago está activo
+        if (!paymentMethod.getIsActive()) {
+            throw new RuntimeException("Payment method is not active: " + paymentMethod.getName());
+        }
+
+        // Crear el pago
+        Payment payment = new Payment();
+        payment.setOrder(order);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setAmount(request.getAmount());
+        payment.setStatus(Payment.PaymentStatus.PENDIENTE);
+        payment.setReferenceNumber(request.getReferenceNumber());
+        payment.setNotes(request.getNotes());
+
+        Payment savedPayment = paymentRepository.save(payment);
+        return mapToResponse(savedPayment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getAllPayments() {
+        return paymentRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getPaymentsByOrder(Long orderId) {
+        return paymentRepository.findByOrderId(orderId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
+        return paymentRepository.findByStatus(status).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getPaymentsByPaymentMethod(Long paymentMethodId) {
+        return paymentRepository.findByPaymentMethodId(paymentMethodId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentResponse getPaymentById(Long id) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
+        return mapToResponse(payment);
+    }
+
+    public PaymentResponse updatePayment(Long id, UpdatePaymentRequest request) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
+
+        if (request.getAmount() != null) {
+            payment.setAmount(request.getAmount());
+        }
+
+        if (request.getStatus() != null) {
+            payment.setStatus(request.getStatus());
+        }
+
+        if (request.getReferenceNumber() != null) {
+            payment.setReferenceNumber(request.getReferenceNumber());
+        }
+
+        if (request.getNotes() != null) {
+            payment.setNotes(request.getNotes());
+        }
+
+        Payment updatedPayment = paymentRepository.save(payment);
+        return mapToResponse(updatedPayment);
+    }
+
+    public void deletePayment(Long id) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
+        paymentRepository.delete(payment);
+    }
+
+    private PaymentResponse mapToResponse(Payment payment) {
+        PaymentResponse response = new PaymentResponse();
+        response.setId(payment.getId());
+        response.setOrderId(payment.getOrder().getId());
+        response.setPaymentMethodId(payment.getPaymentMethod().getId());
+        response.setPaymentMethodName(payment.getPaymentMethod().getName());
+        response.setAmount(payment.getAmount());
+        response.setStatus(payment.getStatus());
+        response.setReferenceNumber(payment.getReferenceNumber());
+        response.setNotes(payment.getNotes());
+        response.setCreatedAt(payment.getCreatedAt());
+        response.setUpdatedAt(payment.getUpdatedAt());
+        return response;
+    }
+}

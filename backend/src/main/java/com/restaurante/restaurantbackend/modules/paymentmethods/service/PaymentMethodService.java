@@ -1,0 +1,112 @@
+package com.restaurante.restaurantbackend.modules.paymentmethods.service;
+
+import com.restaurante.restaurantbackend.modules.paymentmethods.dto.CreatePaymentMethodRequest;
+import com.restaurante.restaurantbackend.modules.paymentmethods.dto.PaymentMethodResponse;
+import com.restaurante.restaurantbackend.modules.paymentmethods.dto.UpdatePaymentMethodRequest;
+import com.restaurante.restaurantbackend.modules.paymentmethods.model.PaymentMethod;
+import com.restaurante.restaurantbackend.modules.paymentmethods.repository.PaymentMethodRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+public class PaymentMethodService {
+
+    private final PaymentMethodRepository paymentMethodRepository;
+
+    public PaymentMethodService(PaymentMethodRepository paymentMethodRepository) {
+        this.paymentMethodRepository = paymentMethodRepository;
+    }
+
+    public PaymentMethodResponse createPaymentMethod(CreatePaymentMethodRequest request) {
+        // Validar que el nombre no exista
+        if (paymentMethodRepository.findByName(request.getName()).isPresent()) {
+            throw new RuntimeException("Payment method with name already exists: " + request.getName());
+        }
+
+        PaymentMethod paymentMethod = new PaymentMethod();
+        paymentMethod.setName(request.getName());
+        paymentMethod.setType(request.getType());
+        paymentMethod.setDescription(request.getDescription());
+        paymentMethod.setIsActive(true);
+
+        PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
+        return mapToResponse(savedPaymentMethod);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentMethodResponse> getAllPaymentMethods() {
+        return paymentMethodRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentMethodResponse> getActivePaymentMethods() {
+        return paymentMethodRepository.findByIsActiveTrue().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentMethodResponse> getPaymentMethodsByType(PaymentMethod.PaymentType type) {
+        return paymentMethodRepository.findByType(type).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentMethodResponse getPaymentMethodById(Long id) {
+        PaymentMethod paymentMethod = paymentMethodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment method not found with id: " + id));
+        return mapToResponse(paymentMethod);
+    }
+
+    public PaymentMethodResponse updatePaymentMethod(Long id, UpdatePaymentMethodRequest request) {
+        PaymentMethod paymentMethod = paymentMethodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment method not found with id: " + id));
+
+        if (request.getName() != null && !request.getName().equals(paymentMethod.getName())) {
+            if (paymentMethodRepository.findByName(request.getName()).isPresent()) {
+                throw new RuntimeException("Payment method with name already exists: " + request.getName());
+            }
+            paymentMethod.setName(request.getName());
+        }
+
+        if (request.getType() != null) {
+            paymentMethod.setType(request.getType());
+        }
+
+        if (request.getDescription() != null) {
+            paymentMethod.setDescription(request.getDescription());
+        }
+
+        if (request.getIsActive() != null) {
+            paymentMethod.setIsActive(request.getIsActive());
+        }
+
+        PaymentMethod updatedPaymentMethod = paymentMethodRepository.save(paymentMethod);
+        return mapToResponse(updatedPaymentMethod);
+    }
+
+    public void deletePaymentMethod(Long id) {
+        PaymentMethod paymentMethod = paymentMethodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment method not found with id: " + id));
+        paymentMethodRepository.delete(paymentMethod);
+    }
+
+    private PaymentMethodResponse mapToResponse(PaymentMethod paymentMethod) {
+        PaymentMethodResponse response = new PaymentMethodResponse();
+        response.setId(paymentMethod.getId());
+        response.setName(paymentMethod.getName());
+        response.setType(paymentMethod.getType());
+        response.setDescription(paymentMethod.getDescription());
+        response.setIsActive(paymentMethod.getIsActive());
+        response.setCreatedAt(paymentMethod.getCreatedAt());
+        response.setUpdatedAt(paymentMethod.getUpdatedAt());
+        return response;
+    }
+}
