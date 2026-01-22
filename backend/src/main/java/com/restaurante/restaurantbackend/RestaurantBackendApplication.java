@@ -1,4 +1,4 @@
-package com.restaurante.restaurant_backend;
+package com.restaurante.restaurantbackend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

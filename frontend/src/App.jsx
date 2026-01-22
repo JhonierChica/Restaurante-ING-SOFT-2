@@ -8,6 +8,7 @@ function App() {
         <button>Ver Menú</button>
         <button>Pedidos</button>
         <button>Administración</button>
+        <button>contacto</button>
       </div>
     </div>
   );
