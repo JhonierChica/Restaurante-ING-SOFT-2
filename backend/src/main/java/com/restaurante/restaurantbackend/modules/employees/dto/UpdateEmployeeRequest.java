@@ -10,10 +10,8 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateEmployeeRequest {
+    private Long positionId;
     private String phone;
     private String address;
-    private BigDecimal salary;
-    private String position;
-    private String department;
     private Boolean active;
 }

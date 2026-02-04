@@ -22,12 +22,8 @@ public class ClientController {
 
     @PostMapping
     public ResponseEntity<ClientResponse> createClient(@RequestBody CreateClientRequest request) {
-        try {
-            ClientResponse response = clientService.createClient(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            throw new RuntimeException("Error creating client: " + e.getMessage());
-        }
+        ClientResponse response = clientService.createClient(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping

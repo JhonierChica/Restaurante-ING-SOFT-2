@@ -1,0 +1,424 @@
+/* Mr Panzo - Form Styles */
+
+/* Form Container */
+.form-container {
+  background: var(--background-white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+}
+
+/* Form Layout */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Form Grid Layouts - Optimizado para menos scroll */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Clases de span para campos que ocupan múltiples columnas */
+.col-span-2 {
+  grid-column: span 2;
+}
+
+.col-span-3 {
+  grid-column: span 3;
+}
+
+.col-span-full {
+  grid-column: 1 / -1;
+}
+
+.form-section {
+  margin-bottom: 14px;
+}
+
+.form-section:last-child {
+  margin-bottom: 0;
+}
+
+.form-section h3,
+.form-section h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Form Group */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Textarea */
+.form-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all var(--transition-normal);
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--primary-red);
+  box-shadow: 0 0 0 4px rgba(211, 47, 47, 0.1);
+}
+
+/* Select */
+.form-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--background-white);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary-red);
+  box-shadow: 0 0 0 4px rgba(211, 47, 47, 0.1);
+}
+
+/* Checkbox y Radio */
+.checkbox-label,
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-input,
+.radio-input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-red);
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--border-light);
+}
+
+.form-actions .btn {
+  min-width: 120px;
+}
+
+/* Badge Styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: var(--success);
+}
+
+.badge-danger {
+  background-color: rgba(244, 67, 54, 0.15);
+  color: var(--danger);
+}
+
+.badge-warning {
+  background-color: rgba(255, 152, 0, 0.15);
+  color: var(--warning);
+}
+
+.badge-info {
+  background-color: rgba(33, 150, 243, 0.15);
+  color: var(--info);
+}
+
+.badge-primary {
+  background-color: rgba(211, 47, 47, 0.15);
+  color: var(--primary-red);
+}
+
+/* Text Utilities */
+.text-muted {
+  color: var(--text-light);
+}
+
+.text-medium {
+  color: var(--text-medium);
+}
+
+.text-dark {
+  color: var(--text-dark);
+}
+
+.text-primary {
+  color: var(--primary-red);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+/* Profile/Position/Employee Specific Cards */
+.profile-card,
+.position-card,
+.employee-card {
+  padding: var(--spacing-lg);
+}
+
+.profile-header,
+.position-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+}
+
+.profile-code,
+.position-code {
+  display: inline-block;
+  padding: 4px 8px;
+  background: var(--background-gray);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-medium);
+  letter-spacing: 1px;
+  margin-top: var(--spacing-xs);
+}
+
+.profile-description {
+  color: var(--text-medium);
+  font-size: 14px;
+  margin: var(--spacing-md) 0;
+  line-height: 1.5;
+}
+
+.profile-permissions {
+  margin-top: var(--spacing-md);
+}
+
+.profile-permissions strong {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-dark);
+  font-size: 13px;
+}
+
+.permissions-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.permission-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(211, 47, 47, 0.08);
+  border: 1px solid rgba(211, 47, 47, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--primary-red);
+  font-weight: 600;
+}
+
+/* Grid Layouts */
+.profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+/* Permissions Section in Forms */
+.permissions-section {
+  margin-top: var(--spacing-lg);
+}
+
+.permissions-section h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-sm);
+}
+
+.permissions-section p {
+  color: var(--text-light);
+  font-size: 13px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.permission-module {
+  margin-bottom: var(--spacing-lg);
+  background: var(--background-gray);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.module-header h5 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.permission-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--background-white);
+  border-radius: var(--radius-sm);
+}
+
+/* Table Actions */
+.table-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+/* Department Badge */
+.department-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, rgba(211, 47, 47, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-red);
+}
+
+/* Salary Display */
+.salary {
+  font-weight: 700;
+  color: var(--success);
+  font-size: 15px;
+}
+
+/* Profile Badge in User Tables */
+.profile-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-dark) 100%);
+  color: var(--text-white);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  /* Tablets: 2 columnas */
+  .form-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile: 1 columna */
+  .form-row,
+  .form-grid-2,
+  .form-grid-3,
+  .form-grid-auto {
+    grid-template-columns: 1fr;
+  }
+
+  .col-span-2,
+  .col-span-3,
+  .col-span-full {
+    grid-column: 1 / -1;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .profiles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .permission-list {
+    grid-template-columns: 1fr;
+  }
+}

@@ -16,11 +16,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     
     boolean existsByDocumentNumber(String documentNumber);
     
+    boolean existsByEmail(String email);
+    
     boolean existsByUserId(Long userId);
     
     List<Employee> findByActiveTrue();
     
-    List<Employee> findByDepartment(String department);
+    List<Employee> findByPositionId(Long positionId);
     
-    List<Employee> findByPosition(String position);
+    // Obtener empleados sin usuario asignado
+    List<Employee> findByUserIsNull();
 }

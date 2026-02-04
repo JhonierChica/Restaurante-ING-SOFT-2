@@ -31,7 +31,8 @@ public class RestaurantTableService {
         table.setTableNumber(request.getTableNumber());
         table.setCapacity(request.getCapacity());
         table.setLocation(request.getLocation());
-        table.setStatus(RestaurantTable.TableStatus.DISPONIBLE);
+        // Usar el status del request, o DISPONIBLE como valor por defecto
+        table.setStatus(request.getStatus() != null ? request.getStatus() : RestaurantTable.TableStatus.DISPONIBLE);
         table.setIsActive(true);
 
         RestaurantTable savedTable = tableRepository.save(table);

@@ -1,0 +1,146 @@
+package com.restaurante.restaurantbackend.modules.positions.service;
+
+import com.restaurante.restaurantbackend.modules.employees.repository.EmployeeRepository;
+import com.restaurante.restaurantbackend.modules.positions.dto.CreatePositionRequest;
+import com.restaurante.restaurantbackend.modules.positions.dto.PositionResponse;
+import com.restaurante.restaurantbackend.modules.positions.dto.UpdatePositionRequest;
+import com.restaurante.restaurantbackend.modules.positions.model.Position;
+import com.restaurante.restaurantbackend.modules.positions.repository.PositionRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+public class PositionService {
+
+    private final PositionRepository positionRepository;
+    private final EmployeeRepository employeeRepository;
+
+    public PositionService(PositionRepository positionRepository,
+                          EmployeeRepository employeeRepository) {
+        this.positionRepository = positionRepository;
+        this.employeeRepository = employeeRepository;
+    }
+
+    public PositionResponse createPosition(CreatePositionRequest request) {
+        if (positionRepository.existsByCode(request.getCode())) {
+            throw new RuntimeException("Position code already exists: " + request.getCode());
+        }
+
+        Position position = new Position();
+        position.setCode(request.getCode().toUpperCase());
+        position.setName(request.getName());
+        position.setDescription(request.getDescription());
+        position.setDepartment(request.getDepartment());
+        position.setBaseSalary(request.getBaseSalary());
+        position.setResponsibilities(request.getResponsibilities());
+        position.setActive(true);
+
+        Position savedPosition = positionRepository.save(position);
+        return mapToResponse(savedPosition);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PositionResponse> getAllPositions() {
+        return positionRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PositionResponse> getActivePositions() {
+        return positionRepository.findByActiveTrue().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PositionResponse> getPositionsByDepartment(String department) {
+        return positionRepository.findByDepartment(department).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PositionResponse getPositionById(Long id) {
+        Position position = positionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Position not found with id: " + id));
+        return mapToResponse(position);
+    }
+
+    @Transactional(readOnly = true)
+    public PositionResponse getPositionByCode(String code) {
+        Position position = positionRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Position not found with code: " + code));
+        return mapToResponse(position);
+    }
+
+    public PositionResponse updatePosition(Long id, UpdatePositionRequest request) {
+        Position position = positionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Position not found with id: " + id));
+
+        if (request.getName() != null) {
+            position.setName(request.getName());
+        }
+
+        if (request.getDescription() != null) {
+            position.setDescription(request.getDescription());
+        }
+
+        if (request.getDepartment() != null) {
+            position.setDepartment(request.getDepartment());
+        }
+
+        if (request.getBaseSalary() != null) {
+            position.setBaseSalary(request.getBaseSalary());
+        }
+
+        if (request.getResponsibilities() != null) {
+            position.setResponsibilities(request.getResponsibilities());
+        }
+
+        if (request.getActive() != null) {
+            position.setActive(request.getActive());
+        }
+
+        Position updatedPosition = positionRepository.save(position);
+        return mapToResponse(updatedPosition);
+    }
+
+    public void deletePosition(Long id) {
+        Position position = positionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cargo no encontrado con id: " + id));
+        
+        // Verificar si hay empleados con este cargo
+        List<com.restaurante.restaurantbackend.modules.employees.model.Employee> employees = 
+                employeeRepository.findByPositionId(id);
+        
+        if (!employees.isEmpty()) {
+            throw new RuntimeException(
+                "No se puede eliminar el cargo '" + position.getName() + 
+                "' porque tiene " + employees.size() + 
+                " empleado(s) asociado(s). Primero reasigne o elimine los empleados."
+            );
+        }
+        
+        // Si no hay empleados, desactivar el cargo
+        position.setActive(false);
+        positionRepository.save(position);
+    }
+
+    private PositionResponse mapToResponse(Position position) {
+        return new PositionResponse(
+                position.getId(),
+                position.getCode(),
+                position.getName(),
+                position.getDescription(),
+                position.getDepartment(),
+                position.getBaseSalary(),
+                position.getResponsibilities(),
+                position.getActive()
+        );
+    }
+}

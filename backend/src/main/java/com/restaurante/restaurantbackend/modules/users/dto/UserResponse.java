@@ -1,6 +1,6 @@
 package com.restaurante.restaurantbackend.modules.users.dto;
 
-import com.restaurante.restaurantbackend.modules.users.model.UserRole;
+import com.restaurante.restaurantbackend.modules.profiles.dto.ProfileResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,9 +15,8 @@ import java.time.LocalDateTime;
 public class UserResponse {
     private Long id;
     private String username;
-    private String email;
     private String fullName;
-    private UserRole role;
+    private ProfileResponse profile; // Perfil de seguridad con permisos
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

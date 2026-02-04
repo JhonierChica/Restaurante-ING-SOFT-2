@@ -3,7 +3,6 @@ package com.restaurante.restaurantbackend.modules.users.controller;
 import com.restaurante.restaurantbackend.modules.users.dto.CreateUserRequest;
 import com.restaurante.restaurantbackend.modules.users.dto.UpdateUserRequest;
 import com.restaurante.restaurantbackend.modules.users.dto.UserResponse;
-import com.restaurante.restaurantbackend.modules.users.model.UserRole;
 import com.restaurante.restaurantbackend.modules.users.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,12 +23,8 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@RequestBody CreateUserRequest request) {
-        try {
-            UserResponse response = userService.createUser(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        UserResponse response = userService.createUser(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
@@ -42,12 +37,8 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
-        try {
-            UserResponse user = userService.getUserById(id);
-            return ResponseEntity.ok(user);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        UserResponse user = userService.getUserById(id);
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/username/{username}")
@@ -60,9 +51,9 @@ public class UserController {
         }
     }
 
-    @GetMapping("/role/{role}")
-    public ResponseEntity<List<UserResponse>> getUsersByRole(@PathVariable UserRole role) {
-        List<UserResponse> users = userService.getUsersByRole(role);
+    @GetMapping("/profile/{profileId}")
+    public ResponseEntity<List<UserResponse>> getUsersByProfile(@PathVariable Long profileId) {
+        List<UserResponse> users = userService.getUsersByProfileId(profileId);
         return ResponseEntity.ok(users);
     }
 
@@ -70,22 +61,14 @@ public class UserController {
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable Long id, 
             @RequestBody UpdateUserRequest request) {
-        try {
-            UserResponse user = userService.updateUser(id, request);
-            return ResponseEntity.ok(user);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        UserResponse user = userService.updateUser(id, request);
+        return ResponseEntity.ok(user);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        try {
-            userService.deleteUser(id);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/deactivate")

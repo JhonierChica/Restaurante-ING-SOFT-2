@@ -1,6 +1,5 @@
 package com.restaurante.restaurantbackend.modules.users.dto;
 
-import com.restaurante.restaurantbackend.modules.users.model.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,8 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateUserRequest {
     private String username;
-    private String email;
     private String password;
     private String fullName;
-    private UserRole role;
+    private Long profileId; // ID del perfil de seguridad
+    private Long employeeId; // ID del empleado (opcional) para vincular usuario a empleado existente
 }

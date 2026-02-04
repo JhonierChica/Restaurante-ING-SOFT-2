@@ -1,0 +1,74 @@
+/* SVG Icons Styles - Mr Panzo */
+
+/* Nav Icon Base Styles */
+.nav-icon {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  transition: all var(--transition-fast);
+}
+
+/* Group Header Icon */
+.nav-group-header .nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Subitem Icon */
+.nav-subitem .nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Logout Icon */
+.logout-icon {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Nav Arrow (Chevrons) */
+.nav-arrow {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-arrow svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition-fast);
+}
+
+/* Sidebar Toggle Icons */
+.sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Hover Effects */
+.nav-item:hover .nav-icon svg {
+  transform: scale(1.05);
+}
+
+.nav-item.active .nav-icon svg {
+  transform: scale(1.1);
+}
+
+/* Logo Icon */
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
+}

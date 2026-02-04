@@ -1,0 +1,28 @@
+import apiClient from './apiClient';
+
+export const paymentService = {
+  getAllPayments: async () => {
+    const response = await apiClient.get('/payments');
+    return response.data;
+  },
+
+  getPaymentById: async (id) => {
+    const response = await apiClient.get(`/payments/${id}`);
+    return response.data;
+  },
+
+  createPayment: async (paymentData) => {
+    const response = await apiClient.post('/payments', paymentData);
+    return response.data;
+  },
+
+  getPaymentsByOrder: async (orderId) => {
+    const response = await apiClient.get(`/payments/order/${orderId}`);
+    return response.data;
+  },
+
+  getPendingPayments: async () => {
+    const response = await apiClient.get('/payments/pending');
+    return response.data;
+  },
+};

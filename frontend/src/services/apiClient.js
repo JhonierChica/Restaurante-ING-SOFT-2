@@ -1,7 +1,45 @@
+import axios from 'axios';
+
 const API_BASE_URL = 'http://localhost:8080/api';
 
-export async function apiGet(endpoint) {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`);
-  if (!response.ok) throw new Error('API Error');
-  return response.json();
-}
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para agregar token de autenticación
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para manejar errores de respuesta
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Solo redirigir a login si es un 401 Y NO es el endpoint de login
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
+      // Sesión expirada o token inválido
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Solo redirigir si no estamos ya en la página de login
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;

@@ -5,11 +5,19 @@ import com.restaurante.restaurantbackend.modules.employees.dto.EmployeeResponse;
 import com.restaurante.restaurantbackend.modules.employees.dto.UpdateEmployeeRequest;
 import com.restaurante.restaurantbackend.modules.employees.model.Employee;
 import com.restaurante.restaurantbackend.modules.employees.repository.EmployeeRepository;
+import com.restaurante.restaurantbackend.modules.permissions.dto.PermissionResponse;
+import com.restaurante.restaurantbackend.modules.positions.dto.PositionResponse;
+import com.restaurante.restaurantbackend.modules.positions.model.Position;
+import com.restaurante.restaurantbackend.modules.positions.repository.PositionRepository;
+import com.restaurante.restaurantbackend.modules.profiles.dto.ProfileResponse;
+import com.restaurante.restaurantbackend.modules.profiles.model.Profile;
+import com.restaurante.restaurantbackend.modules.profiles.repository.ProfileRepository;
 import com.restaurante.restaurantbackend.modules.users.model.User;
 import com.restaurante.restaurantbackend.modules.users.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,40 +27,63 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
+    private final PositionRepository positionRepository;
+    private final ProfileRepository profileRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, 
+                          UserRepository userRepository,
+                          PositionRepository positionRepository,
+                          ProfileRepository profileRepository) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
+        this.positionRepository = positionRepository;
+        this.profileRepository = profileRepository;
     }
 
     public EmployeeResponse createEmployee(CreateEmployeeRequest request) {
-        // Validar que el usuario existe
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
-
-        // Validar que el usuario no tenga ya un empleado asociado
-        if (employeeRepository.existsByUserId(request.getUserId())) {
-            throw new RuntimeException("Employee already exists for this user");
+        System.out.println("📥 Recibiendo petición para crear empleado:");
+        System.out.println("   - firstName: " + request.getFirstName());
+        System.out.println("   - lastName: " + request.getLastName());
+        System.out.println("   - email: " + request.getEmail());
+        System.out.println("   - positionId: " + request.getPositionId());
+        
+        // VALIDACIONES
+        
+        // 1. Validar email único si se proporciona
+        if (request.getEmail() != null && 
+            employeeRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("El email ya está registrado: " + request.getEmail());
         }
-
-        // Validar documento único si se proporciona
+        
+        // 2. Validar documento único si se proporciona
         if (request.getDocumentNumber() != null && 
             employeeRepository.existsByDocumentNumber(request.getDocumentNumber())) {
-            throw new RuntimeException("Document number already exists");
+            throw new RuntimeException("El número de documento ya existe: " + request.getDocumentNumber());
         }
-
+        
+        // 3. Validar que el cargo existe
+        Position position = positionRepository.findById(request.getPositionId())
+                .orElseThrow(() -> new RuntimeException("Cargo no encontrado con id: " + request.getPositionId()));
+        System.out.println("✅ Cargo encontrado: " + position.getName());
+        
+        // CREAR EMPLEADO (sin usuario por ahora)
         Employee employee = new Employee();
-        employee.setUser(user);
+        employee.setUser(null); // Se asignará cuando se cree el usuario
+        employee.setPosition(position);
+        employee.setFirstName(request.getFirstName());
+        employee.setLastName(request.getLastName());
+        employee.setEmail(request.getEmail());
         employee.setDocumentNumber(request.getDocumentNumber());
         employee.setPhone(request.getPhone());
         employee.setAddress(request.getAddress());
-        employee.setHireDate(request.getHireDate());
-        employee.setSalary(request.getSalary());
-        employee.setPosition(request.getPosition());
-        employee.setDepartment(request.getDepartment());
+        employee.setHireDate(LocalDate.now()); // Fecha de hoy por defecto
+        employee.setSalary(position.getBaseSalary()); // Usar el salario base del cargo
         employee.setActive(true);
 
         Employee savedEmployee = employeeRepository.save(employee);
+        System.out.println("✅ Empleado creado con ID: " + savedEmployee.getId());
+        System.out.println("🎉 Empleado creado exitosamente sin usuario");
+        
         return mapToResponse(savedEmployee);
     }
 
@@ -66,6 +97,13 @@ public class EmployeeService {
     @Transactional(readOnly = true)
     public List<EmployeeResponse> getActiveEmployees() {
         return employeeRepository.findByActiveTrue().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<EmployeeResponse> getEmployeesWithoutUser() {
+        return employeeRepository.findByUserIsNull().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -85,15 +123,8 @@ public class EmployeeService {
     }
 
     @Transactional(readOnly = true)
-    public List<EmployeeResponse> getEmployeesByDepartment(String department) {
-        return employeeRepository.findByDepartment(department).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EmployeeResponse> getEmployeesByPosition(String position) {
-        return employeeRepository.findByPosition(position).stream()
+    public List<EmployeeResponse> getEmployeesByPositionId(Long positionId) {
+        return employeeRepository.findByPositionId(positionId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -102,24 +133,18 @@ public class EmployeeService {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + id));
 
+        if (request.getPositionId() != null) {
+            Position position = positionRepository.findById(request.getPositionId())
+                    .orElseThrow(() -> new RuntimeException("Position not found with id: " + request.getPositionId()));
+            employee.setPosition(position);
+        }
+
         if (request.getPhone() != null) {
             employee.setPhone(request.getPhone());
         }
 
         if (request.getAddress() != null) {
             employee.setAddress(request.getAddress());
-        }
-
-        if (request.getSalary() != null) {
-            employee.setSalary(request.getSalary());
-        }
-
-        if (request.getPosition() != null) {
-            employee.setPosition(request.getPosition());
-        }
-
-        if (request.getDepartment() != null) {
-            employee.setDepartment(request.getDepartment());
         }
 
         if (request.getActive() != null) {
@@ -145,20 +170,70 @@ public class EmployeeService {
     }
 
     private EmployeeResponse mapToResponse(Employee employee) {
+        // Mapear Position
+        PositionResponse positionResponse = null;
+        if (employee.getPosition() != null) {
+            positionResponse = new PositionResponse(
+                    employee.getPosition().getId(),
+                    employee.getPosition().getCode(),
+                    employee.getPosition().getName(),
+                    employee.getPosition().getDescription(),
+                    employee.getPosition().getDepartment(),
+                    employee.getPosition().getBaseSalary(),
+                    employee.getPosition().getResponsibilities(),
+                    employee.getPosition().getActive()
+            );
+        }
+
+        // Mapear Profile (solo si tiene usuario)
+        ProfileResponse profileResponse = null;
+        Long userId = null;
+        String username = null;
+        
+        if (employee.getUser() != null) {
+            userId = employee.getUser().getId();
+            username = employee.getUser().getUsername();
+            
+            if (employee.getUser().getProfile() != null) {
+                profileResponse = new ProfileResponse(
+                        employee.getUser().getProfile().getId(),
+                        employee.getUser().getProfile().getCode(),
+                        employee.getUser().getProfile().getName(),
+                        employee.getUser().getProfile().getDescription(),
+                        employee.getUser().getProfile().getPermissions().stream()
+                                .map(p -> new PermissionResponse(
+                                        p.getId(),
+                                        p.getCode(),
+                                        p.getName(),
+                                        p.getDescription(),
+                                        p.getModule(),
+                                        p.getActive()
+                                ))
+                                .collect(Collectors.toSet()),
+                        employee.getUser().getProfile().getActive()
+                );
+            }
+        }
+
+        // Construir nombre completo
+        String fullName = employee.getFirstName() + " " + employee.getLastName();
+
         return EmployeeResponse.builder()
                 .id(employee.getId())
-                .userId(employee.getUser().getId())
-                .username(employee.getUser().getUsername())
-                .fullName(employee.getUser().getFullName())
-                .email(employee.getUser().getEmail())
-                .role(employee.getUser().getRole())
+                .userId(userId)
+                .username(username)
+                .firstName(employee.getFirstName())
+                .lastName(employee.getLastName())
+                .fullName(fullName)
+                .email(employee.getEmail())
+                .profile(profileResponse)
+                .position(positionResponse)
                 .documentNumber(employee.getDocumentNumber())
                 .phone(employee.getPhone())
                 .address(employee.getAddress())
                 .hireDate(employee.getHireDate())
                 .salary(employee.getSalary())
-                .position(employee.getPosition())
-                .department(employee.getDepartment())
+                .notes(employee.getNotes())
                 .active(employee.getActive())
                 .createdAt(employee.getCreatedAt())
                 .updatedAt(employee.getUpdatedAt())

@@ -22,6 +22,11 @@ public class ClientService {
     }
 
     public ClientResponse createClient(CreateClientRequest request) {
+        // Validar que el nombre no esté vacío
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new RuntimeException("Client name is required");
+        }
+        
         // Validar que el email no exista si se proporciona
         if (request.getEmail() != null && !request.getEmail().isEmpty()) {
             if (clientRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -37,7 +42,7 @@ public class ClientService {
         }
 
         Client client = new Client();
-        client.setName(request.getName());
+        client.setName(request.getName().trim());
         client.setPhone(request.getPhone());
         client.setEmail(request.getEmail());
         client.setIdentificationNumber(request.getIdentificationNumber());

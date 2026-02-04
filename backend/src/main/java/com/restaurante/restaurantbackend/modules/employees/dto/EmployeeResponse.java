@@ -1,6 +1,7 @@
 package com.restaurante.restaurantbackend.modules.employees.dto;
 
-import com.restaurante.restaurantbackend.modules.users.model.UserRole;
+import com.restaurante.restaurantbackend.modules.positions.dto.PositionResponse;
+import com.restaurante.restaurantbackend.modules.profiles.dto.ProfileResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,16 +19,18 @@ public class EmployeeResponse {
     private Long id;
     private Long userId;
     private String username;
-    private String fullName;
+    private String firstName;
+    private String lastName;
+    private String fullName; // Concatenación de firstName + lastName para el frontend
     private String email;
-    private UserRole role;
+    private ProfileResponse profile; // Perfil de seguridad del usuario (si tiene)
+    private PositionResponse position; // Cargo que ocupa
     private String documentNumber;
     private String phone;
     private String address;
     private LocalDate hireDate;
     private BigDecimal salary;
-    private String position;
-    private String department;
+    private String notes;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

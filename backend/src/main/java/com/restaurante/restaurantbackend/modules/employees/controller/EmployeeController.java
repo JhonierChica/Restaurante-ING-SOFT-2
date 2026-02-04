@@ -4,6 +4,7 @@ import com.restaurante.restaurantbackend.modules.employees.dto.CreateEmployeeReq
 import com.restaurante.restaurantbackend.modules.employees.dto.EmployeeResponse;
 import com.restaurante.restaurantbackend.modules.employees.dto.UpdateEmployeeRequest;
 import com.restaurante.restaurantbackend.modules.employees.service.EmployeeService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,13 +23,9 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public ResponseEntity<EmployeeResponse> createEmployee(@RequestBody CreateEmployeeRequest request) {
-        try {
-            EmployeeResponse response = employeeService.createEmployee(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<EmployeeResponse> createEmployee(@Valid @RequestBody CreateEmployeeRequest request) {
+        EmployeeResponse response = employeeService.createEmployee(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
@@ -59,15 +56,15 @@ public class EmployeeController {
         }
     }
 
-    @GetMapping("/department/{department}")
-    public ResponseEntity<List<EmployeeResponse>> getEmployeesByDepartment(@PathVariable String department) {
-        List<EmployeeResponse> employees = employeeService.getEmployeesByDepartment(department);
+    @GetMapping("/position/{positionId}")
+    public ResponseEntity<List<EmployeeResponse>> getEmployeesByPosition(@PathVariable Long positionId) {
+        List<EmployeeResponse> employees = employeeService.getEmployeesByPositionId(positionId);
         return ResponseEntity.ok(employees);
     }
 
-    @GetMapping("/position/{position}")
-    public ResponseEntity<List<EmployeeResponse>> getEmployeesByPosition(@PathVariable String position) {
-        List<EmployeeResponse> employees = employeeService.getEmployeesByPosition(position);
+    @GetMapping("/without-user")
+    public ResponseEntity<List<EmployeeResponse>> getEmployeesWithoutUser() {
+        List<EmployeeResponse> employees = employeeService.getEmployeesWithoutUser();
         return ResponseEntity.ok(employees);
     }
 
@@ -75,12 +72,8 @@ public class EmployeeController {
     public ResponseEntity<EmployeeResponse> updateEmployee(
             @PathVariable Long id,
             @RequestBody UpdateEmployeeRequest request) {
-        try {
-            EmployeeResponse employee = employeeService.updateEmployee(id, request);
-            return ResponseEntity.ok(employee);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        EmployeeResponse employee = employeeService.updateEmployee(id, request);
+        return ResponseEntity.ok(employee);
     }
 
     @DeleteMapping("/{id}")
