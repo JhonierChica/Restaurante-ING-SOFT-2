@@ -4,13 +4,10 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "categories")
+@Table(name = "categoria")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,25 +15,44 @@ public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_categoria")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "nombre_categoria", nullable = false, length = 30)
     private String name;
 
-    @Column(length = 500)
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
+
+    @Column(name = "descripcion", length = 30)
     private String description;
-
-    @Column(nullable = false)
-    private Boolean active = true;
-
-    @Column(name = "display_order")
+    
+    @Column(name = "orden_visualizacion")
     private Integer displayOrder;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    
+    @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    
+    @Column(name = "fecha_actualizacion")
     private LocalDateTime updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    // Método helper para compatibilidad
+    public Boolean getActive() {
+        return "A".equals(this.status);
+    }
+    
+    public void setActive(Boolean active) {
+        this.status = active ? "A" : "I";
+    }
 }

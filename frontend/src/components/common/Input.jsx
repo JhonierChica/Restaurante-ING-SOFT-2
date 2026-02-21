@@ -10,7 +10,10 @@ const Input = ({
   placeholder, 
   required = false,
   error,
-  disabled = false 
+  disabled = false,
+  readOnly = false,
+  style,
+  title
 }) => {
   return (
     <div className="input-group">
@@ -28,6 +31,9 @@ const Input = ({
         placeholder={placeholder}
         required={required}
         disabled={disabled}
+        readOnly={readOnly}
+        title={title}
+        style={style}
         className={`input ${error ? 'input-error' : ''}`}
       />
       {error && <span className="error-message">{error}</span>}

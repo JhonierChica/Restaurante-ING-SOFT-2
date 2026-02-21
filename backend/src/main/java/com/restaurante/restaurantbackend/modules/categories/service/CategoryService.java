@@ -30,7 +30,16 @@ public class CategoryService {
         Category category = new Category();
         category.setName(request.getName());
         category.setDescription(request.getDescription());
-        category.setDisplayOrder(request.getDisplayOrder());
+        
+        // Si no se especifica displayOrder, asignar el siguiente número disponible
+        if (request.getDisplayOrder() != null) {
+            category.setDisplayOrder(request.getDisplayOrder());
+        } else {
+            // Obtener el máximo displayOrder actual y sumar 1
+            Integer maxOrder = categoryRepository.findMaxDisplayOrder();
+            category.setDisplayOrder(maxOrder + 1);
+        }
+        
         category.setActive(true);
 
         Category savedCategory = categoryRepository.save(category);

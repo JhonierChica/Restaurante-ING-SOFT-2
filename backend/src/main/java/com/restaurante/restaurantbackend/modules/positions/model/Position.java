@@ -4,9 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -16,7 +13,7 @@ import java.time.LocalDateTime;
  * Ejemplos: "Chef Ejecutivo", "Mesero", "Cajero", "Gerente de Piso"
  */
 @Entity
-@Table(name = "positions")
+@Table(name = "cargo")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,34 +21,56 @@ public class Position {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_cargo")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String code; // Ej: "CHEF", "WAITER", "CASHIER", "FLOOR_MANAGER"
+    @Column(name = "codigo", length = 50, unique = true)
+    private String code; // Código único del cargo
 
-    @Column(nullable = false, length = 100)
-    private String name; // Ej: "Chef Ejecutivo", "Mesero"
+    @Column(name = "nombre_cargo", nullable = false, length = 100)
+    private String name; // Nombre del cargo
 
-    @Column(length = 255)
-    private String description;
+    @Column(name = "descripcion", length = 255)
+    private String description; // Descripción del cargo
 
-    @Column(nullable = false, length = 50)
-    private String department; // Ej: "Cocina", "Servicio", "Administración"
+    @Column(name = "departamento", length = 50)
+    private String department; // Departamento al que pertenece
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal baseSalary; // Salario base sugerido para este cargo
+    @Column(name = "salario_base", precision = 10, scale = 2)
+    private BigDecimal baseSalary; // Salario base del cargo
 
-    @Column(length = 500)
-    private String responsibilities; // Responsabilidades principales
+    @Column(name = "responsabilidades", columnDefinition = "TEXT")
+    private String responsibilities; // Responsabilidades del cargo
 
-    @Column(nullable = false)
-    private Boolean active = true;
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    
+    @Column(name = "fecha_actualizacion")
     private LocalDateTime updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (status == null) {
+            status = "A";
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    // Método helper para compatibilidad
+    public Boolean getActive() {
+        return "A".equals(this.status);
+    }
+    
+    public void setActive(Boolean active) {
+        this.status = active ? "A" : "I";
+    }
 }

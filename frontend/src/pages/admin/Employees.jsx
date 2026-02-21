@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
-import Table from '../../components/common/Table';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Loading from '../../components/common/Loading';
 import EmployeeForm from '../../components/common/EmployeeForm';
-import { EmployeeIcon } from '../../components/common/Icons';
+import { EmployeeIcon, EditIcon, DeleteIcon, ToggleIcon } from '../../components/common/Icons';
 import { employeeService } from '../../services/employeeService';
 import { positionService } from '../../services/positionService';
+import '../../styles/Profiles.css';
 
+// VERSIÓN 2.0 - Diseño de tarjetas con grid layout
 const Employees = () => {
   const [employees, setEmployees] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -17,6 +18,8 @@ const Employees = () => {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [formError, setFormError] = useState('');
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
   useEffect(() => {
     loadEmployees();
@@ -53,25 +56,79 @@ const Employees = () => {
     }
     setError('');
     setSuccess('');
+    setFormError('');
+    setEditingEmployee(null);
     setShowForm(true);
   };
 
   const handleFormComplete = async (formData) => {
     try {
       setLoading(true);
-      await employeeService.createEmployee(formData);
-      setSuccess('✅ Empleado creado exitosamente');
+      setFormError('');
+      console.log('📤 Datos a enviar al backend:', formData);
+      console.log('📏 Longitud firstName:', formData.firstName?.length);
+      console.log('📏 Longitud lastName:', formData.lastName?.length);
+      console.log('📏 Longitud email:', formData.email?.length);
+      
+      if (editingEmployee) {
+        // Editar empleado existente
+        await employeeService.updateEmployee(editingEmployee.id, formData);
+        setSuccess('✅ Empleado actualizado exitosamente');
+      } else {
+        // Crear nuevo empleado
+        await employeeService.createEmployee(formData);
+        setSuccess('✅ Empleado creado exitosamente');
+      }
+      
       setShowForm(false);
+      setFormError('');
+      setEditingEmployee(null);
       await loadEmployees();
       
       // Limpiar mensaje de éxito después de 5 segundos
       setTimeout(() => setSuccess(''), 5000);
     } catch (error) {
-      console.error('Error al crear empleado:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Error al crear empleado';
-      setError(`❌ ${errorMessage}`);
+      console.error('❌ Error completo:', error);
+      console.error('❌ Error response:', error.response);
+      console.error('❌ Error data:', error.response?.data);
+      
+      // Extraer errores de validación del backend
+      const action = editingEmployee ? 'actualizar' : 'crear';
+      let errorMessage = `Error al ${action} empleado`;
+      if (error.response?.data?.fieldErrors) {
+        const fieldErrors = error.response.data.fieldErrors;
+        const errorList = Object.entries(fieldErrors)
+          .map(([field, msg]) => `• ${field}: ${msg}`)
+          .join('\n');
+        errorMessage = `Errores de validación:\n${errorList}`;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setFormError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEdit = (employee) => {
+    setEditingEmployee(employee);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const handleToggleStatus = async (employeeId, currentStatus) => {
+    const action = currentStatus ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Está seguro de ${action} este empleado?`)) {
+      try {
+        await employeeService.updateEmployee(employeeId, { active: !currentStatus });
+        setSuccess(`Empleado ${action === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
+        loadEmployees();
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (error) {
+        console.error(`Error al ${action} empleado:`, error);
+        setError(`Error al ${action} empleado`);
+      }
     }
   };
 
@@ -88,95 +145,6 @@ const Employees = () => {
       }
     }
   };
-
-  const columns = [
-    {
-      header: 'Nombre',
-      accessor: 'fullName',
-      render: (employee) => (
-        <div>
-          <strong>{employee.fullName}</strong>
-          <br />
-          <small className="text-muted">@{employee.username}</small>
-        </div>
-      ),
-    },
-    {
-      header: 'Documento',
-      accessor: 'documentNumber',
-      render: (employee) => employee.documentNumber || <span className="text-muted">No especificado</span>,
-    },
-    {
-      header: 'Cargo',
-      accessor: 'position',
-      render: (employee) => (
-        <div>
-          <strong>{employee.position?.name}</strong>
-          <br />
-          <small className="text-muted">{employee.position?.department}</small>
-        </div>
-      ),
-    },
-    {
-      header: 'Perfil',
-      accessor: 'profile',
-      render: (employee) => (
-        <span className="profile-badge">
-          {employee.profile?.name}
-        </span>
-      ),
-    },
-    {
-      header: 'Contacto',
-      accessor: 'phone',
-      render: (employee) => (
-        <div>
-          {employee.phone && <div>📞 {employee.phone}</div>}
-          {employee.email && <div>✉️ {employee.email}</div>}
-        </div>
-      ),
-    },
-    {
-      header: 'Salario',
-      accessor: 'salary',
-      render: (employee) => (
-        employee.salary ? (
-          <span className="salary">
-            ${employee.salary.toLocaleString('es-CO')}
-          </span>
-        ) : (
-          <span className="text-muted">No especificado</span>
-        )
-      ),
-    },
-    {
-      header: 'Fecha Contratación',
-      accessor: 'hireDate',
-      render: (employee) => (
-        employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('es-ES') : '-'
-      ),
-    },
-    {
-      header: 'Estado',
-      accessor: 'active',
-      render: (employee) => (
-        <span className={`badge ${employee.active ? 'badge-success' : 'badge-danger'}`}>
-          {employee.active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-    {
-      header: 'Acciones',
-      accessor: 'actions',
-      render: (employee) => (
-        <div className="table-actions">
-          <Button size="small" variant="danger" onClick={() => handleDelete(employee)}>
-            Eliminar
-          </Button>
-        </div>
-      ),
-    },
-  ];
 
   if (loading && employees.length === 0) {
     return <Loading message="Cargando empleados..." />;
@@ -229,60 +197,107 @@ const Employees = () => {
               </ul>
             </div>
           </Card>
-        ) : employees.length > 0 ? (
-          <Card>
-            <Table columns={columns} data={employees} />
-          </Card>
-        ) : (
+        ) : employees.length === 0 ? (
           <div className="empty-state" style={{ textAlign: 'center', padding: '3rem' }}>
             <h3>No hay empleados registrados</h3>
             <p>Comienza agregando tu primer empleado</p>
             <Button onClick={handleAdd}>Crear primer empleado</Button>
+          </div>
+        ) : (
+          <div className="profiles-grid">
+            {employees.map((employee) => (
+              <Card key={employee.id}>
+                <div className="profile-card">
+                  <div className="profile-header">
+                    <div>
+                      <h3>{employee.fullName}</h3>
+                      <span className="profile-id">
+                        {employee.documentNumber || 'Sin documento'}
+                      </span>
+                    </div>
+                    <span className={`badge ${employee.active ? 'badge-success' : 'badge-danger'}`}>
+                      {employee.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+                  
+                  <div className="profile-permissions">
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Cargo:</strong> {employee.position?.name}
+                    </div>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Perfil:</strong> {employee.profile?.name || 'Sin perfil'}
+                    </div>
+                    {employee.phone && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Teléfono:</strong> {employee.phone}
+                      </div>
+                    )}
+                    {employee.email && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Email:</strong> {employee.email}
+                      </div>
+                    )}
+                    {employee.salary && (
+                      <div>
+                        <strong>Salario:</strong> ${employee.salary.toLocaleString('es-CO')}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="card-actions">
+                    <button 
+                      className="icon-btn icon-btn-edit"
+                      onClick={() => handleEdit(employee)}
+                      title="Editar empleado"
+                    >
+                      <EditIcon size={18} />
+                    </button>
+                    <button 
+                      className={`icon-btn ${employee.active ? 'icon-btn-warning' : 'icon-btn-success'}`}
+                      onClick={() => handleToggleStatus(employee.id, employee.active)}
+                      title={employee.active ? 'Desactivar empleado' : 'Activar empleado'}
+                    >
+                      <ToggleIcon size={18} />
+                    </button>
+                    <button 
+                      className="icon-btn icon-btn-danger" 
+                      onClick={() => handleDelete(employee)}
+                      title="Eliminar empleado"
+                    >
+                      <DeleteIcon size={18} />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         )}
 
         {/* Modal con Formulario */}
         <Modal
           isOpen={showForm}
-          onClose={() => setShowForm(false)}
-          title="Nuevo Empleado"
+          onClose={() => {
+            setShowForm(false);
+            setEditingEmployee(null);
+            setFormError('');
+          }}
+          title={editingEmployee ? 'Editar Empleado' : 'Nuevo Empleado'}
           size="large"
           showActions={false}
         >
           <EmployeeForm
             onComplete={handleFormComplete}
-            onCancel={() => setShowForm(false)}
+            onCancel={() => {
+              setShowForm(false);
+              setEditingEmployee(null);
+              setFormError('');
+            }}
             positions={positions}
+            serverError={formError}
+            initialData={editingEmployee}
           />
         </Modal>
       </div>
-
-      <style jsx>{`
-        .profile-badge {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          background: #007bff;
-          color: white;
-          border-radius: 12px;
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-
-        .salary {
-          font-weight: 600;
-          color: #28a745;
-        }
-
-        .text-muted {
-          color: #6c757d;
-          font-size: 0.9rem;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-      `}</style>
     </Layout>
   );
 };

@@ -11,7 +11,9 @@ import java.util.List;
 @AllArgsConstructor
 public class CreateOrderRequest {
     private Long clientId;
+    private Long userId; // Usuario que crea el pedido
     private Long tableId;
+    private String orderType; // ESTABLECIMIENTO o DOMICILIO
     private List<OrderItemRequest> items;
     private String notes;
 }

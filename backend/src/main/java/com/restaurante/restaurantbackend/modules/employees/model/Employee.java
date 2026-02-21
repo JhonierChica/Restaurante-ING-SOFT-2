@@ -6,9 +6,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,7 +17,7 @@ import java.time.LocalDateTime;
  * - Position (cargo/puesto laboral que ocupa)
  */
 @Entity
-@Table(name = "employees")
+@Table(name = "empleado")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,51 +25,59 @@ public class Employee {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_empleado")
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", unique = true)
-    private User user; // Usuario del sistema (credencial de acceso) - Puede ser null hasta que se cree el usuario
-
     @ManyToOne
-    @JoinColumn(name = "position_id", nullable = false)
+    @JoinColumn(name = "id_cargo", nullable = false)
     private Position position; // Cargo/puesto que ocupa
 
-    @Column(name = "first_name", nullable = false, length = 100)
+    @Column(name = "nom_empleado", nullable = false, length = 20)
     private String firstName; // Nombres del empleado
 
-    @Column(name = "last_name", nullable = false, length = 100)
+    @Column(name = "ape_empleado", nullable = false, length = 20)
     private String lastName; // Apellidos del empleado
 
-    @Column(name = "document_number", unique = true, length = 50)
-    private String documentNumber;
+    @Column(name = "numero_documento", length = 20, unique = true)
+    private String documentNumber; // Número de documento de identidad
 
-    @Column(unique = true, length = 150)
+    @Column(name = "correo_empleado", nullable = false, length = 30)
     private String email; // Correo electrónico del empleado
 
-    @Column(length = 20)
-    private String phone;
+    @Column(name = "tel_empleado", nullable = false, length = 10)
+    private String phone; // Teléfono
 
-    @Column(length = 200)
-    private String address;
+    @Column(name = "direccion_empleado", nullable = false, length = 30)
+    private String address; // Dirección
 
-    @Column(name = "hire_date")
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
+
+    // Campos no mapeados a BD (solo para lógica de negocio)
+    @Transient
+    private User user;
+    
+    @Transient
     private LocalDate hireDate;
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal salary; // Salario específico del empleado (puede diferir del base)
-
-    @Column(length = 500)
-    private String notes; // Notas adicionales sobre el empleado
-
-    @Column(nullable = false)
-    private Boolean active = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    
+    @Transient
+    private BigDecimal salary;
+    
+    @Transient
+    private String notes;
+    
+    @Transient
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    
+    @Transient
     private LocalDateTime updatedAt;
+    
+    // Método helper para compatibilidad
+    public Boolean getActive() {
+        return "A".equals(this.status);
+    }
+    
+    public void setActive(Boolean active) {
+        this.status = active ? "A" : "I";
+    }
 }

@@ -15,9 +15,13 @@ public class OrderResponse {
     private Long id;
     private Long clientId;
     private String clientName;
+    private String clientPhone;
+    private String clientAddress;
     private Long tableId;
     private Integer tableNumber;
     private Order.OrderStatus status;
+    private String orderType; // ESTABLECIMIENTO o DOMICILIO
+    private Float total; // Total a pagar
     private List<OrderItemResponse> items;
     private String notes;
     private LocalDateTime createdAt;

@@ -26,12 +26,21 @@ public class PositionService {
     }
 
     public PositionResponse createPosition(CreatePositionRequest request) {
-        if (positionRepository.existsByCode(request.getCode())) {
-            throw new RuntimeException("Position code already exists: " + request.getCode());
+        // Generar código automáticamente si no se proporciona
+        String code = request.getCode();
+        if (code == null || code.trim().isEmpty()) {
+            code = generatePositionCode(request.getName());
+        } else {
+            code = code.trim().toUpperCase();
+        }
+        
+        // Verificar si el código ya existe
+        if (positionRepository.existsByCode(code)) {
+            throw new RuntimeException("Ya existe un cargo con el código: " + code);
         }
 
         Position position = new Position();
-        position.setCode(request.getCode().toUpperCase());
+        position.setCode(code);
         position.setName(request.getName());
         position.setDescription(request.getDescription());
         position.setDepartment(request.getDepartment());
@@ -41,6 +50,31 @@ public class PositionService {
 
         Position savedPosition = positionRepository.save(position);
         return mapToResponse(savedPosition);
+    }
+    
+    /**
+     * Genera un código único basado en el nombre del cargo
+     */
+    private String generatePositionCode(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new RuntimeException("El nombre del cargo es obligatorio");
+        }
+        
+        // Tomar las primeras letras del nombre
+        String baseCode = name.trim()
+            .toUpperCase()
+            .replaceAll("[^A-Z0-9]", "")
+            .substring(0, Math.min(name.length(), 6));
+        
+        // Si el código base ya existe, agregar un número
+        String code = baseCode;
+        int counter = 1;
+        while (positionRepository.existsByCode(code)) {
+            code = baseCode + counter;
+            counter++;
+        }
+        
+        return code;
     }
 
     @Transactional(readOnly = true)

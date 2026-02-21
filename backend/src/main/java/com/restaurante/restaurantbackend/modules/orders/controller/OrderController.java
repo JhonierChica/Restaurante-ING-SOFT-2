@@ -24,9 +24,22 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@RequestBody CreateOrderRequest request) {
         try {
+            // LOG: Ver qué datos llegan
+            System.out.println("=== CREATE ORDER REQUEST ===");
+            System.out.println("ClientId: " + request.getClientId());
+            System.out.println("UserId: " + request.getUserId());
+            System.out.println("TableId: " + request.getTableId());
+            System.out.println("OrderType: " + request.getOrderType());
+            System.out.println("Items count: " + (request.getItems() != null ? request.getItems().size() : 0));
+            System.out.println("Notes: " + request.getNotes());
+            
             OrderResponse response = orderService.createOrder(request);
+            System.out.println("Order created successfully with ID: " + response.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
+            // LOG: Ver el error específico
+            System.err.println("ERROR creating order: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error creating order: " + e.getMessage());
         }
     }
@@ -51,6 +64,12 @@ public class OrderController {
         }
         
         return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    @GetMapping("/all-for-payments")
+    public ResponseEntity<List<OrderResponse>> getAllOrdersForPayments() {
+        // Endpoint específico para el módulo de pagos que incluye TODAS las órdenes
+        return ResponseEntity.ok(orderService.getAllOrdersForPayments());
     }
 
     @GetMapping("/{id}")

@@ -54,6 +54,17 @@
   transform: translateY(-2px);
 }
 
+.btn-warning {
+  background-color: #FF9800;
+  color: var(--text-white);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background-color: #F57C00;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
 .btn-danger {
   background-color: var(--danger);
   color: var(--text-white);

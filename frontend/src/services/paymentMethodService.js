@@ -11,11 +11,6 @@ export const paymentMethodService = {
     return response.data;
   },
 
-  getPaymentMethodsByType: async (type) => {
-    const response = await apiClient.get(`/payment-methods?type=${type}`);
-    return response.data;
-  },
-
   getPaymentMethodById: async (id) => {
     const response = await apiClient.get(`/payment-methods/${id}`);
     return response.data;

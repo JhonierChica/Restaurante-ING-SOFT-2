@@ -12,7 +12,6 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     
     Optional<PaymentMethod> findByName(String name);
     
-    List<PaymentMethod> findByType(PaymentMethod.PaymentType type);
-    
-    List<PaymentMethod> findByIsActiveTrue();
+    // Buscar por estado (A=Activo, I=Inactivo) - campo real en BD
+    List<PaymentMethod> findByStatus(String status);
 }

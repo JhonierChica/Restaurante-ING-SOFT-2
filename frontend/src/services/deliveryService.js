@@ -16,33 +16,18 @@ export const deliveryService = {
     return response.data;
   },
 
-  createDelivery: async (deliveryData) => {
-    const response = await apiClient.post('/deliveries', deliveryData);
+  getDeliveryByOrderId: async (orderId) => {
+    const response = await apiClient.get(`/deliveries/order/${orderId}`);
     return response.data;
   },
 
-  updateDeliveryStatus: async (id, statusData) => {
-    const response = await apiClient.put(`/deliveries/${id}/status`, statusData);
-    return response.data;
-  },
-
-  deleteDelivery: async (id) => {
-    const response = await apiClient.delete(`/deliveries/${id}`);
+  updateDeliveryStatus: async (id, status) => {
+    const response = await apiClient.put(`/deliveries/${id}/status`, { status });
     return response.data;
   },
 
   getDeliveriesByStatus: async (status) => {
     const response = await apiClient.get(`/deliveries/status/${status}`);
-    return response.data;
-  },
-
-  getDeliveriesByDeliveryPerson: async (deliveryPersonId) => {
-    const response = await apiClient.get(`/deliveries/delivery-person/${deliveryPersonId}`);
-    return response.data;
-  },
-
-  getDeliveriesByDateRange: async (startDate, endDate) => {
-    const response = await apiClient.get(`/deliveries/date-range?startDate=${startDate}&endDate=${endDate}`);
     return response.data;
   },
 };

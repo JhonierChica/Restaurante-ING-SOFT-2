@@ -85,6 +85,13 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
+    public ClientResponse getClientByIdentificationNumber(String identificationNumber) {
+        Client client = clientRepository.findByIdentificationNumber(identificationNumber)
+                .orElseThrow(() -> new RuntimeException("Client not found with identification number: " + identificationNumber));
+        return mapToResponse(client);
+    }
+
+    @Transactional(readOnly = true)
     public List<ClientResponse> searchClientsByName(String name) {
         return clientRepository.findByNameContainingIgnoreCase(name).stream()
                 .map(this::mapToResponse)

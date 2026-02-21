@@ -30,4 +30,9 @@ export const clientService = {
     const response = await apiClient.get(`/clients/search?query=${searchTerm}`);
     return response.data;
   },
+
+  findByIdentificationNumber: async (identificationNumber) => {
+    const response = await apiClient.get(`/clients/identification/${identificationNumber}`);
+    return response.data;
+  },
 };

@@ -10,6 +10,4 @@ import lombok.NoArgsConstructor;
 public class UpdateDeliveryStatusRequest {
     
     private String status;
-    private String deliveryPerson;
-    private String notes;
 }

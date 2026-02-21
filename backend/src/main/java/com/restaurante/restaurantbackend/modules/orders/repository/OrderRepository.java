@@ -16,4 +16,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByTableId(Long tableId);
     
     List<Order> findByTableIdAndStatus(Long tableId, Order.OrderStatus status);
+    
+    // Filtrar por tipo de pedido
+    List<Order> findByOrderType(String orderType);
+    
+    // Combinar filtros
+    List<Order> findByOrderTypeAndStatus(String orderType, Order.OrderStatus status);
 }

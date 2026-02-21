@@ -6,7 +6,7 @@ import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
-import { MenuIcon } from '../../components/common/Icons';
+import { MenuIcon, EditIcon, DeleteIcon, ToggleIcon } from '../../components/common/Icons';
 import { menuService } from '../../services/menuService';
 import { categoryService } from '../../services/categoryService';
 
@@ -82,6 +82,20 @@ const Menu = () => {
     }
   };
 
+  const handleToggleAvailability = async (item) => {
+    const action = item.available ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Está seguro de ${action} ${item.name}?`)) {
+      try {
+        await menuService.updateMenuItem(item.id, { ...item, available: !item.available });
+        alert(`Ítem ${action === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
+        loadData();
+      } catch (error) {
+        console.error(`Error al ${action} ítem:`, error);
+        alert(`Error al ${action} ítem`);
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       if (editingItem) {
@@ -135,21 +149,75 @@ const Menu = () => {
   return (
     <Layout>
       <div className="page-container">
-        <Card
-          title={<><MenuIcon size={24} /> Gestión de Menú</>}
-          actions={
-            <Button onClick={handleAdd}>
-              + Nuevo Ítem
-            </Button>
-          }
-        >
-          <Table
-            columns={columns}
-            data={menuItems}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        </Card>
+        <div className="page-header">
+          <div>
+            <h1><MenuIcon size={32} /> Gestión de Menú</h1>
+            <p>Administra los ítems del menú del restaurante</p>
+          </div>
+          <Button onClick={handleAdd}>
+            + Nuevo Ítem
+          </Button>
+        </div>
+
+        <div className="profiles-grid">
+          {menuItems.map((item) => (
+            <Card key={item.id}>
+              <div className="profile-card">
+                <div className="profile-header">
+                  <div>
+                    <h3>{item.name}</h3>
+                    <span className="profile-id">${parseFloat(item.price).toFixed(2)}</span>
+                  </div>
+                  <span className={`badge ${item.available ? 'badge-success' : 'badge-danger'}`}>
+                    {item.available ? 'Disponible' : 'No Disponible'}
+                  </span>
+                </div>
+                
+                <div className="profile-permissions">
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>📋 Descripción:</strong> {item.description || '-'}
+                  </div>
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>🏷️ Categoría:</strong> {getCategoryName(item.categoryId)}
+                  </div>
+                  <div>
+                    <strong>💵 Precio:</strong> ${parseFloat(item.price).toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="card-actions">
+                  <button 
+                    className="icon-btn icon-btn-edit" 
+                    onClick={() => handleEdit(item)}
+                    title="Editar ítem"
+                  >
+                    <EditIcon size={18} />
+                  </button>
+                  <button 
+                    className={`icon-btn ${item.available ? 'icon-btn-warning' : 'icon-btn-success'}`}
+                    onClick={() => handleToggleAvailability(item)}
+                    title={item.available ? 'Desactivar ítem' : 'Activar ítem'}
+                  >
+                    <ToggleIcon size={18} />
+                  </button>
+                  <button 
+                    className="icon-btn icon-btn-danger" 
+                    onClick={() => handleDelete(item)}
+                    title="Eliminar ítem"
+                  >
+                    <DeleteIcon size={18} />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {menuItems.length === 0 && (
+          <div className="empty-state">
+            <p>No hay ítems en el menú</p>
+          </div>
+        )}
 
         <Modal
           isOpen={showModal}

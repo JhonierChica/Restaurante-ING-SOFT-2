@@ -14,12 +14,5 @@ public class UpdateMenuItemRequest {
     private String description;
     private BigDecimal price;
     private Long categoryId;
-    private String imageUrl;
     private Boolean available;
-    private Integer preparationTime;
-    private Boolean isVegetarian;
-    private Boolean isVegan;
-    private Boolean isGlutenFree;
-    private Boolean isSpicy;
-    private Integer calories;
 }

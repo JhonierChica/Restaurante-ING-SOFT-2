@@ -29,14 +29,18 @@ public class ProfileService {
     }
 
     public ProfileResponse createProfile(CreateProfileRequest request) {
-        if (profileRepository.existsByCode(request.getCode())) {
-            throw new RuntimeException("Profile code already exists: " + request.getCode());
+        // Validar que el nombre no esté duplicado
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new RuntimeException("Profile name is required");
+        }
+        
+        // Validar longitud del nombre (máximo 12 caracteres según BD)
+        if (request.getName().length() > 12) {
+            throw new RuntimeException("Profile name must be 12 characters or less");
         }
 
         Profile profile = new Profile();
-        profile.setCode(request.getCode().toUpperCase());
-        profile.setName(request.getName());
-        profile.setDescription(request.getDescription());
+        profile.setName(request.getName().toUpperCase()); // Guardar en mayúsculas
         profile.setActive(true);
 
         // Asignar permisos
@@ -67,15 +71,16 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public ProfileResponse getProfileById(Long id) {
-        Profile profile = profileRepository.findByIdWithPermissions(id)
+        Profile profile = profileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Profile not found with id: " + id));
         return mapToResponse(profile);
     }
 
     @Transactional(readOnly = true)
     public ProfileResponse getProfileByCode(String code) {
-        Profile profile = profileRepository.findByCodeWithPermissions(code)
-                .orElseThrow(() -> new RuntimeException("Profile not found with code: " + code));
+        // Como code no existe en BD, buscar por name
+        Profile profile = profileRepository.findByName(code)
+                .orElseThrow(() -> new RuntimeException("Profile not found with name: " + code));
         return mapToResponse(profile);
     }
 
@@ -84,12 +89,14 @@ public class ProfileService {
                 .orElseThrow(() -> new RuntimeException("Profile not found with id: " + id));
 
         if (request.getName() != null) {
-            profile.setName(request.getName());
+            // Validar longitud del nombre (máximo 12 caracteres)
+            if (request.getName().length() > 12) {
+                throw new RuntimeException("Profile name must be 12 characters or less");
+            }
+            profile.setName(request.getName().toUpperCase());
         }
 
-        if (request.getDescription() != null) {
-            profile.setDescription(request.getDescription());
-        }
+        // description no se guarda (es @Transient)
 
         if (request.getActive() != null) {
             profile.setActive(request.getActive());
@@ -110,8 +117,17 @@ public class ProfileService {
     public void deleteProfile(Long id) {
         Profile profile = profileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Profile not found with id: " + id));
-        profile.setActive(false);
-        profileRepository.save(profile);
+        // Eliminar físicamente de la base de datos
+        profileRepository.delete(profile);
+    }
+
+    public ProfileResponse toggleProfileStatus(Long id) {
+        Profile profile = profileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Profile not found with id: " + id));
+        // Cambiar el estado: si está activo (A) pasar a inactivo (I) y viceversa
+        profile.setActive(!profile.getActive());
+        Profile updatedProfile = profileRepository.save(profile);
+        return mapToResponse(updatedProfile);
     }
 
     private ProfileResponse mapToResponse(Profile profile) {
@@ -128,9 +144,9 @@ public class ProfileService {
 
         return new ProfileResponse(
                 profile.getId(),
-                profile.getCode(),
+                profile.getName(), // Usar name como code también
                 profile.getName(),
-                profile.getDescription(),
+                "", // description vacío (no existe en BD)
                 permissionResponses,
                 profile.getActive()
         );

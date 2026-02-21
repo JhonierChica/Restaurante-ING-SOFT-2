@@ -14,11 +14,4 @@ public class CreateMenuItemRequest {
     private String description;
     private BigDecimal price;
     private Long categoryId;
-    private String imageUrl;
-    private Integer preparationTime;
-    private Boolean isVegetarian;
-    private Boolean isVegan;
-    private Boolean isGlutenFree;
-    private Boolean isSpicy;
-    private Integer calories;
 }

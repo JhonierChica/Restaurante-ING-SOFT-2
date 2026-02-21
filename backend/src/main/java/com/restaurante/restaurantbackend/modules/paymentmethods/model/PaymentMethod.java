@@ -4,13 +4,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payment_methods")
+@Table(name = "`metodoPago`")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,34 +14,21 @@ public class PaymentMethod {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "`id_metPag`")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "`nombre_metPag`", nullable = false, length = 12)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private PaymentType type;
-
-    @Column(length = 500)
-    private String description;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    public enum PaymentType {
-        EFECTIVO,
-        TRANSFERENCIA,
-        TARJETA_CREDITO,
-        TARJETA_DEBITO,
-        OTRO
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
+    
+    // Método helper para compatibilidad
+    public Boolean getIsActive() {
+        return "A".equals(this.status);
+    }
+    
+    public void setIsActive(Boolean active) {
+        this.status = active ? "A" : "I";
     }
 }

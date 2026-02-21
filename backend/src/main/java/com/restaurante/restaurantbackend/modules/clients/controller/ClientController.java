@@ -56,6 +56,17 @@ public class ClientController {
         }
     }
 
+    @GetMapping("/identification/{identificationNumber}")
+    public ResponseEntity<ClientResponse> getClientByIdentificationNumber(
+            @PathVariable String identificationNumber) {
+        try {
+            ClientResponse client = clientService.getClientByIdentificationNumber(identificationNumber);
+            return ResponseEntity.ok(client);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ClientResponse> updateClient(
             @PathVariable Long id,

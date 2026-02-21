@@ -1,13 +1,12 @@
 package com.restaurante.restaurantbackend.modules.users.model;
 
 import com.restaurante.restaurantbackend.modules.profiles.model.Profile;
+import com.restaurante.restaurantbackend.modules.employees.model.Employee;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
  * Se le asigna un Profile que determina QUÉ puede hacer en el sistema.
  */
 @Entity
-@Table(name = "users")
+@Table(name = "usuario")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,34 +23,48 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_usuario")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @ManyToOne
+    @JoinColumn(name = "id_empleado", nullable = false)
+    private Employee employee; // Empleado asociado
+
+    @Column(name = "username", nullable = false, length = 20)
     private String username;
 
-    @Column(nullable = false)
+    @Column(name = "contraseña", nullable = false, length = 30)
     private String password;
 
-    @Column(name = "full_name", length = 150)
-    private String fullName;
+    @Column(name = "fecha_registro", nullable = false)
+    private LocalDate registrationDate = LocalDate.now();
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "profile_id", nullable = false)
-    private Profile profile; // Perfil de seguridad que define permisos
+    @JoinColumn(name = "id_rol", nullable = false)
+    private Profile profile; // Perfil de seguridad (rol)
 
-    // Mantener role por compatibilidad temporal (DEPRECATED)
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
+
+    // Campos adicionales no mapeados a BD
+    @Transient
+    private String fullName;
+    
+    @Transient
     private UserRole role;
-
-    @Column(nullable = false)
-    private Boolean active = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    
+    @Transient
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    
+    @Transient
     private LocalDateTime updatedAt;
+    
+    // Método helper para compatibilidad
+    public Boolean getActive() {
+        return "A".equals(this.status);
+    }
+    
+    public void setActive(Boolean active) {
+        this.status = active ? "A" : "I";
+    }
 }

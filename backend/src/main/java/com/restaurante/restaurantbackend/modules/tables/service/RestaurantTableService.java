@@ -32,7 +32,7 @@ public class RestaurantTableService {
         table.setCapacity(request.getCapacity());
         table.setLocation(request.getLocation());
         // Usar el status del request, o DISPONIBLE como valor por defecto
-        table.setStatus(request.getStatus() != null ? request.getStatus() : RestaurantTable.TableStatus.DISPONIBLE);
+        table.setTableStatus(request.getStatus() != null ? request.getStatus() : RestaurantTable.TableStatus.DISPONIBLE);
         table.setIsActive(true);
 
         RestaurantTable savedTable = tableRepository.save(table);
@@ -94,7 +94,7 @@ public class RestaurantTableService {
         }
 
         if (request.getStatus() != null) {
-            table.setStatus(request.getStatus());
+            table.setTableStatus(request.getStatus());
         }
 
         if (request.getIsActive() != null) {
@@ -116,7 +116,7 @@ public class RestaurantTableService {
         response.setId(table.getId());
         response.setTableNumber(table.getTableNumber());
         response.setCapacity(table.getCapacity());
-        response.setStatus(table.getStatus());
+        response.setStatus(table.getTableStatus());
         response.setLocation(table.getLocation());
         response.setIsActive(table.getIsActive());
         response.setCreatedAt(table.getCreatedAt());

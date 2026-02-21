@@ -6,9 +6,10 @@ import Input from '../../components/common/Input';
 import Modal from '../../components/common/Modal';
 import Loading from '../../components/common/Loading';
 import Table from '../../components/common/Table';
-import { BriefcaseIcon } from '../../components/common/Icons';
+import { BriefcaseIcon, EditIcon, DeleteIcon, ToggleIcon } from '../../components/common/Icons';
 import { positionService } from '../../services/positionService';
 import { DEPARTMENTS } from '../../utils/constants';
+import '../../styles/Positions.css';
 
 const Positions = () => {
   const [positions, setPositions] = useState([]);
@@ -70,6 +71,19 @@ const Positions = () => {
     setShowModal(true);
   };
 
+  const handleToggleStatus = async (positionId, currentStatus) => {
+    const action = currentStatus ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Está seguro de ${action} este cargo?`)) {
+      try {
+        await positionService.update(positionId, { active: !currentStatus });
+        loadPositions();
+      } catch (error) {
+        setError(`Error al ${action} el cargo`);
+        console.error(error);
+      }
+    }
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('¿Está seguro de eliminar este cargo?')) {
       try {
@@ -105,70 +119,6 @@ const Positions = () => {
     }
   };
 
-  const columns = [
-    {
-      header: 'Código',
-      accessor: 'code',
-      render: (position) => (
-        <span className="position-code">{position.code}</span>
-      ),
-    },
-    {
-      header: 'Nombre',
-      accessor: 'name',
-      render: (position) => (
-        <div>
-          <strong>{position.name}</strong>
-          <br />
-          <small className="text-muted">{position.description}</small>
-        </div>
-      ),
-    },
-    {
-      header: 'Departamento',
-      accessor: 'department',
-      render: (position) => (
-        <span className="department-badge">{position.department}</span>
-      ),
-    },
-    {
-      header: 'Salario Base',
-      accessor: 'baseSalary',
-      render: (position) => (
-        position.baseSalary ? (
-          <span className="salary">
-            ${position.baseSalary.toLocaleString('es-CO')}
-          </span>
-        ) : (
-          <span className="text-muted">No especificado</span>
-        )
-      ),
-    },
-    {
-      header: 'Estado',
-      accessor: 'active',
-      render: (position) => (
-        <span className={`badge ${position.active ? 'badge-success' : 'badge-danger'}`}>
-          {position.active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-    {
-      header: 'Acciones',
-      accessor: 'actions',
-      render: (position) => (
-        <div className="table-actions">
-          <Button size="small" variant="secondary" onClick={() => handleEdit(position)}>
-            Editar
-          </Button>
-          <Button size="small" variant="danger" onClick={() => handleDelete(position.id)}>
-            Eliminar
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
   if (loading) return <Loading />;
 
   return (
@@ -184,11 +134,65 @@ const Positions = () => {
 
         {error && <div className="error-alert">{error}</div>}
 
-        {positions.length > 0 ? (
-          <Card>
-            <Table columns={columns} data={positions} />
-          </Card>
-        ) : (
+        <div className="profiles-grid">
+          {positions.map((position) => (
+            <Card key={position.id}>
+              <div className="profile-card">
+                <div className="profile-header">
+                  <div>
+                    <h3>{position.name}</h3>
+                    <span className="profile-id">{position.code}</span>
+                  </div>
+                  <span className={`badge ${position.active ? 'badge-success' : 'badge-danger'}`}>
+                    {position.active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                
+                <div className="profile-permissions">
+                  {position.description && (
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <small className="text-muted">{position.description}</small>
+                    </div>
+                  )}
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>Departamento:</strong> {position.department}
+                  </div>
+                  {position.baseSalary && (
+                    <div>
+                      <strong>Salario Base:</strong> ${position.baseSalary.toLocaleString('es-CO')}
+                    </div>
+                  )}
+                </div>
+
+                <div className="card-actions">
+                  <button 
+                    className="icon-btn icon-btn-edit" 
+                    onClick={() => handleEdit(position)}
+                    title="Editar cargo"
+                  >
+                    <EditIcon size={18} />
+                  </button>
+                  <button 
+                    className={`icon-btn ${position.active ? 'icon-btn-warning' : 'icon-btn-success'}`}
+                    onClick={() => handleToggleStatus(position.id, position.active)}
+                    title={position.active ? 'Desactivar cargo' : 'Activar cargo'}
+                  >
+                    <ToggleIcon size={18} />
+                  </button>
+                  <button 
+                    className="icon-btn icon-btn-danger" 
+                    onClick={() => handleDelete(position.id)}
+                    title="Eliminar cargo"
+                  >
+                    <DeleteIcon size={18} />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {positions.length === 0 && (
           <div className="empty-state">
             <p>No hay cargos registrados</p>
             <Button onClick={handleCreate}>Crear primer cargo</Button>
@@ -284,136 +288,7 @@ const Positions = () => {
         </Modal>
       </div>
 
-      <style jsx>{`
-        .position-code {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          background: var(--color-primary-light);
-          color: var(--color-primary);
-          border-radius: 12px;
-          font-size: 0.875rem;
-          font-weight: 600;
-        }
-
-        .department-badge {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          background: var(--color-background);
-          border: 1px solid var(--color-border);
-          border-radius: 12px;
-          font-size: 0.875rem;
-        }
-
-        .salary {
-          font-weight: 600;
-          color: var(--color-success);
-        }
-
-        .badge {
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-
-        .badge-success {
-          background: #d4edda;
-          color: #155724;
-        }
-
-        .badge-danger {
-          background: #f8d7da;
-          color: #721c24;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .position-form {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .form-grid-3 {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-        }
-
-        .col-span-2 {
-          grid-column: span 2;
-        }
-
-        .col-span-3 {
-          grid-column: span 3;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 4px;
-          font-weight: 500;
-          color: var(--color-text-primary);
-          font-size: 13px;
-        }
-
-        .form-input,
-        .form-textarea,
-        .form-select {
-          width: 100%;
-          padding: 8px 10px;
-          border: 1px solid var(--color-border);
-          border-radius: 8px;
-          font-family: inherit;
-          font-size: 14px;
-        }
-
-        .form-textarea {
-          resize: vertical;
-          min-height: 60px;
-        }
-
-        .form-select {
-          cursor: pointer;
-        }
-
-        .text-muted {
-          color: var(--color-text-secondary);
-          font-size: 12px;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 12px;
-        }
-
-        @media (max-width: 1024px) {
-          .form-grid-3 {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .form-grid-3 {
-            grid-template-columns: 1fr;
-          }
-
-          .col-span-2,
-          .col-span-3 {
-            grid-column: 1 / -1;
-          }
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 3rem;
-          color: var(--color-text-secondary);
-        }
-      `}</style>
+     
     </Layout>
   );
 };

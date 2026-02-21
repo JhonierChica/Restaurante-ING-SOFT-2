@@ -16,8 +16,6 @@ const PaymentMethods = () => {
   const [editingMethod, setEditingMethod] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'EFECTIVO',
-    description: '',
     isActive: true,
   });
 
@@ -42,8 +40,6 @@ const PaymentMethods = () => {
     setEditingMethod(null);
     setFormData({
       name: '',
-      type: 'EFECTIVO',
-      description: '',
       isActive: true,
     });
     setShowModal(true);
@@ -53,8 +49,6 @@ const PaymentMethods = () => {
     setEditingMethod(method);
     setFormData({
       name: method.name,
-      type: method.type,
-      description: method.description || '',
       isActive: method.isActive,
     });
     setShowModal(true);
@@ -109,17 +103,6 @@ const PaymentMethods = () => {
     });
   };
 
-  const getTypeBadge = (type) => {
-    const badges = {
-      EFECTIVO: '💵 Efectivo',
-      TRANSFERENCIA: '🏦 Transferencia',
-      TARJETA_CREDITO: '💳 Tarjeta Crédito',
-      TARJETA_DEBITO: '💳 Tarjeta Débito',
-      OTRO: '📋 Otro',
-    };
-    return badges[type] || type;
-  };
-
   const getStatusBadge = (isActive) => {
     return isActive ? (
       <span style={{ color: '#10b981', fontWeight: 'bold' }}>✓ Activo</span>
@@ -131,11 +114,6 @@ const PaymentMethods = () => {
   const columns = [
     { header: 'ID', field: 'id' },
     { header: 'Nombre', field: 'name' },
-    { 
-      header: 'Tipo', 
-      render: (item) => getTypeBadge(item.type)
-    },
-    { header: 'Descripción', field: 'description' },
     { 
       header: 'Estado', 
       render: (item) => getStatusBadge(item.isActive)
@@ -187,44 +165,18 @@ const PaymentMethods = () => {
           onConfirm={handleSubmit}
           size="medium"
         >
-          <div className="form-grid-2">
+          <div className="form-grid-1">
             <Input
               label="Nombre"
               name="name"
               value={formData.name}
               onChange={handleChange}
               required
-              placeholder="Ej: Efectivo, Tarjeta Visa"
+              placeholder="Ej: Efectivo, Tarjeta Visa, Transferencia Bancaria"
+              maxLength={12}
             />
-            
+
             <div className="form-group">
-              <label>Tipo</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="form-input"
-                required
-              >
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
-                <option value="TARJETA_CREDITO">Tarjeta Crédito</option>
-                <option value="TARJETA_DEBITO">Tarjeta Débito</option>
-                <option value="OTRO">Otro</option>
-              </select>
-            </div>
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <Input
-                label="Descripción"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Descripción opcional del método de pago"
-              />
-            </div>
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="checkbox-label">
                 <input
                   type="checkbox"

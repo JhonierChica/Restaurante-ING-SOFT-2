@@ -4,6 +4,7 @@ import com.restaurante.restaurantbackend.modules.positions.dto.CreatePositionReq
 import com.restaurante.restaurantbackend.modules.positions.dto.PositionResponse;
 import com.restaurante.restaurantbackend.modules.positions.dto.UpdatePositionRequest;
 import com.restaurante.restaurantbackend.modules.positions.service.PositionService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class PositionController {
     }
 
     @PostMapping
-    public ResponseEntity<PositionResponse> createPosition(@RequestBody CreatePositionRequest request) {
+    public ResponseEntity<PositionResponse> createPosition(@Valid @RequestBody CreatePositionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(positionService.createPosition(request));
     }
 
@@ -54,7 +55,7 @@ public class PositionController {
     @PutMapping("/{id}")
     public ResponseEntity<PositionResponse> updatePosition(
             @PathVariable Long id,
-            @RequestBody UpdatePositionRequest request) {
+            @Valid @RequestBody UpdatePositionRequest request) {
         return ResponseEntity.ok(positionService.updatePosition(id, request));
     }
 

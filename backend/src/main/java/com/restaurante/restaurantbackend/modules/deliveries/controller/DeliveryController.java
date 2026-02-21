@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/deliveries")
@@ -36,15 +37,25 @@ public class DeliveryController {
     @GetMapping
     public ResponseEntity<List<DeliveryResponse>> getAllDeliveries(
             @RequestParam(required = false) Boolean activeOnly) {
-        List<DeliveryResponse> deliveries;
-        
-        if (activeOnly != null && activeOnly) {
-            deliveries = deliveryService.getActiveDeliveries();
-        } else {
-            deliveries = deliveryService.getAllDeliveries();
+        try {
+            System.out.println("[DeliveryController] GET /api/deliveries - activeOnly: " + activeOnly);
+            List<DeliveryResponse> deliveries;
+            
+            if (activeOnly != null && activeOnly) {
+                System.out.println("[DeliveryController] Fetching active deliveries only");
+                deliveries = deliveryService.getActiveDeliveries();
+            } else {
+                System.out.println("[DeliveryController] Fetching all deliveries");
+                deliveries = deliveryService.getAllDeliveries();
+            }
+            
+            System.out.println("[DeliveryController] Successfully fetched " + deliveries.size() + " deliveries");
+            return ResponseEntity.ok(deliveries);
+        } catch (Exception e) {
+            System.err.println("[DeliveryController] ERROR getting deliveries: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
-        
-        return ResponseEntity.ok(deliveries);
     }
 
     @GetMapping("/{id}")
@@ -65,12 +76,6 @@ public class DeliveryController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
-    }
-
-    @GetMapping("/person/{deliveryPerson}")
-    public ResponseEntity<List<DeliveryResponse>> getDeliveriesByPerson(@PathVariable String deliveryPerson) {
-        List<DeliveryResponse> deliveries = deliveryService.getDeliveriesByPerson(deliveryPerson);
-        return ResponseEntity.ok(deliveries);
     }
 
     @GetMapping("/date-range")
@@ -96,6 +101,20 @@ public class DeliveryController {
             @PathVariable Long id,
             @RequestBody UpdateDeliveryStatusRequest request) {
         try {
+            DeliveryResponse delivery = deliveryService.updateDeliveryStatus(id, request);
+            return ResponseEntity.ok(delivery);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<DeliveryResponse> updateDeliveryStatusPut(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> statusMap) {
+        try {
+            UpdateDeliveryStatusRequest request = new UpdateDeliveryStatusRequest();
+            request.setStatus(statusMap.get("status"));
             DeliveryResponse delivery = deliveryService.updateDeliveryStatus(id, request);
             return ResponseEntity.ok(delivery);
         } catch (RuntimeException e) {

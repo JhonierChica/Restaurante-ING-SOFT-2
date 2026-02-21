@@ -422,3 +422,76 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* EmployeeForm Specific Styles */
+.employee-form {
+  padding: 0;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.form-group input.error,
+.form-group select.error {
+  border-color: #dc3545;
+}
+
+.error-text {
+  color: #dc3545;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.info-card {
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+}
+
+.btn-cancel,
+.btn-submit {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: #5a6268;
+}
+
+.btn-submit {
+  background: #28a745;
+  color: white;
+}
+
+.btn-submit:hover {
+  background: #218838;
+}

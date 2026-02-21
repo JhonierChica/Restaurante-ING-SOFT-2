@@ -3,7 +3,6 @@ package com.restaurante.restaurantbackend.modules.paymentmethods.controller;
 import com.restaurante.restaurantbackend.modules.paymentmethods.dto.CreatePaymentMethodRequest;
 import com.restaurante.restaurantbackend.modules.paymentmethods.dto.PaymentMethodResponse;
 import com.restaurante.restaurantbackend.modules.paymentmethods.dto.UpdatePaymentMethodRequest;
-import com.restaurante.restaurantbackend.modules.paymentmethods.model.PaymentMethod;
 import com.restaurante.restaurantbackend.modules.paymentmethods.service.PaymentMethodService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,13 +32,7 @@ public class PaymentMethodController {
 
     @GetMapping
     public ResponseEntity<List<PaymentMethodResponse>> getAllPaymentMethods(
-            @RequestParam(required = false) Boolean activeOnly,
-            @RequestParam(required = false) String type) {
-        
-        if (type != null) {
-            PaymentMethod.PaymentType paymentType = PaymentMethod.PaymentType.valueOf(type.toUpperCase());
-            return ResponseEntity.ok(paymentMethodService.getPaymentMethodsByType(paymentType));
-        }
+            @RequestParam(required = false) Boolean activeOnly) {
         
         List<PaymentMethodResponse> paymentMethods = activeOnly != null && activeOnly
                 ? paymentMethodService.getActivePaymentMethods()
@@ -74,6 +67,16 @@ public class PaymentMethodController {
         try {
             paymentMethodService.deletePaymentMethod(id);
             return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<PaymentMethodResponse> togglePaymentMethodStatus(@PathVariable Long id) {
+        try {
+            PaymentMethodResponse response = paymentMethodService.togglePaymentMethodStatus(id);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

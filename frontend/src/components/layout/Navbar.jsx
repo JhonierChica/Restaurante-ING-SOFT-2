@@ -35,7 +35,7 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef(null);
   const scrollPositionRef = useRef(0);
-  
+
   // Estado persistente para grupos colapsables
   const [expandedGroups, setExpandedGroups] = useState(() => {
     const saved = localStorage.getItem('sidebarExpandedGroups');
@@ -56,12 +56,12 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
     if (savedScrollPos) {
       navElement.scrollTop = parseInt(savedScrollPos, 10);
     }
-    
+
     // Guardar posición de scroll cuando cambie
     const handleScroll = () => {
       localStorage.setItem('sidebarScrollPosition', navElement.scrollTop.toString());
     };
-    
+
     navElement.addEventListener('scroll', handleScroll, { passive: true });
     return () => navElement.removeEventListener('scroll', handleScroll);
   }, [location.pathname]); // Re-ejecutar cuando cambie la ruta
@@ -91,11 +91,22 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
         return {
           mainItems: [
             { path: ROUTES.WAITER_ORDERS, label: 'Pedidos', icon: <OrdersIcon /> },
-            { path: ROUTES.ADMIN_MENU, label: 'Menú', icon: <MenuIcon /> },
             { path: ROUTES.CASHIER_TABLES, label: 'Mesas', icon: <TableIcon /> },
             { path: ROUTES.CASHIER_CLIENTS, label: 'Clientes', icon: <ClientsIcon /> },
+            { path: ROUTES.CASHIER_DELIVERIES, label: 'Domicilios', icon: <DeliveryIcon /> },
+            { path: ROUTES.CASHIER_PAYMENTS, label: 'Pagos', icon: <PaymentIcon /> },
+            { path: ROUTES.CASHIER_CASH_REGISTER, label: 'Cierre de Caja', icon: <CashRegisterIcon /> },
           ],
           groups: [
+            {
+              id: 'menu',
+              label: 'Menú',
+              icon: <MenuIcon />,
+              items: [
+                { path: ROUTES.ADMIN_MENU, label: 'Gestión de Menú', icon: <MenuIcon /> },
+                { path: ROUTES.ADMIN_CATEGORIES, label: 'Categorías', icon: <CategoryIcon /> },
+              ]
+            },
             {
               id: 'personal',
               label: 'Personal',
@@ -108,22 +119,11 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
               ]
             },
             {
-              id: 'finanzas',
-              label: 'Finanzas',
-              icon: <FinanceIcon />,
-              items: [
-                { path: ROUTES.CASHIER_PAYMENTS, label: 'Pagos', icon: <PaymentIcon /> },
-                { path: ROUTES.CASHIER_DELIVERIES, label: 'Domicilios', icon: <DeliveryIcon /> },
-                { path: ROUTES.CASHIER_CASH_REGISTER, label: 'Cierre de Caja', icon: <CashRegisterIcon /> },
-                { path: ROUTES.ADMIN_PAYMENT_METHODS, label: 'Métodos de Pago', icon: <PaymentIcon /> },
-              ]
-            },
-            {
               id: 'configuracion',
               label: 'Configuración',
               icon: <SettingsIcon />,
               items: [
-                { path: ROUTES.ADMIN_CATEGORIES, label: 'Categorías', icon: <CategoryIcon /> },
+                { path: ROUTES.ADMIN_PAYMENT_METHODS, label: 'Métodos de Pago', icon: <PaymentIcon /> },
               ]
             }
           ]
@@ -171,8 +171,8 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
     <>
       {/* Mobile Header */}
       <div className="mobile-header">
-        <button 
-          className="mobile-menu-toggle" 
+        <button
+          className="mobile-menu-toggle"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           <span></span>
@@ -193,8 +193,8 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <div className="logo-icon">
-               <img 
-                src="/logo-mrpanzo-removebg.png" 
+              <img
+                src="/logo-mrpanzo-removebg.png"
                 alt="Mr Panzo Logo"
               />
             </div>
@@ -206,8 +206,8 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
               </div>
             )}
           </div>
-          <button 
-            className="sidebar-toggle desktop-only" 
+          <button
+            className="sidebar-toggle desktop-only"
             onClick={onToggle}
             title={collapsed ? 'Expandir' : 'Contraer'}
           >
@@ -299,8 +299,8 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
 
         {/* Logout Button */}
         <div className="sidebar-footer">
-          <button 
-            className="logout-btn" 
+          <button
+            className="logout-btn"
             onClick={handleLogout}
             title={collapsed ? 'Cerrar Sesión' : ''}
           >
@@ -312,8 +312,8 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
 
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
-        <div 
-          className="mobile-overlay" 
+        <div
+          className="mobile-overlay"
           onClick={() => setMobileMenuOpen(false)}
         ></div>
       )}

@@ -5,9 +5,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -18,7 +15,7 @@ import java.util.Set;
  * Ejemplos: "Mesero", "Cajero", "Gerente", "Administrador"
  */
 @Entity
-@Table(name = "profiles")
+@Table(name = "rol")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,17 +23,16 @@ public class Profile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_rol")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String code; // Ej: "WAITER", "CASHIER", "MANAGER", "ADMIN"
+    @Column(name = "nombre_rol", nullable = false, length = 12)
+    private String name; // Nombre del rol
 
-    @Column(nullable = false, length = 100)
-    private String name; // Ej: "Mesero", "Cajero", "Gerente"
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
 
-    @Column(length = 255)
-    private String description;
-
+    // Relación Many-to-Many con Permissions
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "profile_permissions",
@@ -44,15 +40,26 @@ public class Profile {
         inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     private Set<Permission> permissions = new HashSet<>();
-
-    @Column(nullable = false)
-    private Boolean active = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    
+    // Campos adicionales no mapeados a BD
+    @Transient
+    private String code;
+    
+    @Transient
+    private String description;
+    
+    @Transient
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    
+    @Transient
     private LocalDateTime updatedAt;
+    
+    // Método helper para compatibilidad
+    public Boolean getActive() {
+        return "A".equals(this.status);
+    }
+    
+    public void setActive(Boolean active) {
+        this.status = active ? "A" : "I";
+    }
 }

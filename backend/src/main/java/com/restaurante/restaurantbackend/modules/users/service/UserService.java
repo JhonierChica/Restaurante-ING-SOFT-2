@@ -14,6 +14,7 @@ import com.restaurante.restaurantbackend.modules.users.repository.UserRepository
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,9 @@ public class UserService {
         if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
             throw new RuntimeException("Password is required");
         }
+        if (request.getEmployeeId() == null) {
+            throw new RuntimeException("Employee ID is required");
+        }
         
         // Limpiar espacios en blanco
         String username = request.getUsername().trim();
@@ -55,31 +59,23 @@ public class UserService {
         Profile profile = profileRepository.findById(request.getProfileId())
                 .orElseThrow(() -> new RuntimeException("Profile not found with id: " + request.getProfileId()));
 
-        // Si se proporciona employeeId, validar que existe y no tenga usuario
-        Employee employee = null;
-        if (request.getEmployeeId() != null) {
-            employee = employeeRepository.findById(request.getEmployeeId())
-                    .orElseThrow(() -> new RuntimeException("Employee not found with id: " + request.getEmployeeId()));
-            
-            if (employee.getUser() != null) {
-                throw new RuntimeException("Employee already has a user assigned");
-            }
+        // Validar que el empleado existe y no tiene usuario asignado
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + request.getEmployeeId()));
+        
+        if (employee.getUser() != null) {
+            throw new RuntimeException("Employee already has a user assigned");
         }
 
+        // Crear el usuario con el empleado asignado ANTES de guardar
         User user = new User();
         user.setUsername(username);
         user.setPassword(password); 
-        user.setFullName(request.getFullName() != null ? request.getFullName().trim() : null);
+        user.setEmployee(employee); // IMPORTANTE: Asignar empleado antes de guardar
         user.setProfile(profile);
-        user.setActive(true);
+        user.setActive(request.getActive() != null ? request.getActive() : true);
 
         User savedUser = userRepository.save(user);
-        
-        // Si hay un empleado, vincular el usuario al empleado
-        if (employee != null) {
-            employee.setUser(savedUser);
-            employeeRepository.save(employee);
-        }
 
         return mapToResponse(savedUser);
     }
@@ -177,14 +173,26 @@ public class UserService {
             );
         }
 
+        // Obtener fullName del empleado asociado
+        String fullName = user.getFullName();
+        if (user.getEmployee() != null) {
+            fullName = user.getEmployee().getFirstName() + " " + user.getEmployee().getLastName();
+        }
+
+        // Convertir LocalDate a LocalDateTime para la fecha de registro
+        LocalDateTime registrationDateTime = null;
+        if (user.getRegistrationDate() != null) {
+            registrationDateTime = user.getRegistrationDate().atStartOfDay();
+        }
+
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .fullName(user.getFullName())
+                .fullName(fullName)
                 .profile(profileResponse)
                 .active(user.getActive())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
+                .createdAt(registrationDateTime)
+                .updatedAt(null) // No hay campo de actualización en la BD
                 .build();
     }
 }

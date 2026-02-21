@@ -31,6 +31,12 @@ export const profileService = {
     return response.data;
   },
 
+  // Cambiar estado del perfil (activo/inactivo)
+  toggleStatus: async (id) => {
+    const response = await apiClient.patch(`/profiles/${id}/toggle-status`);
+    return response.data;
+  },
+
   // Obtener perfiles activos
   getActive: async () => {
     const response = await apiClient.get('/profiles/active');

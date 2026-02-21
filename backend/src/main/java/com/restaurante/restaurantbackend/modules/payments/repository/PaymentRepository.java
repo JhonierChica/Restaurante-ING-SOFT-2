@@ -5,16 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
     List<Payment> findByOrderId(Long orderId);
     
-    List<Payment> findByStatus(Payment.PaymentStatus status);
+    // Buscar por status usando el valor String de la BD (P, C, X, F)
+    List<Payment> findByStatus(String status);
     
     List<Payment> findByPaymentMethodId(Long paymentMethodId);
-    
-    Optional<Payment> findByReferenceNumber(String referenceNumber);
 }

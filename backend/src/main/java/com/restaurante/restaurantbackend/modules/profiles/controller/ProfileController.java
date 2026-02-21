@@ -53,6 +53,11 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.updateProfile(id, request));
     }
 
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<ProfileResponse> toggleProfileStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(profileService.toggleProfileStatus(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProfile(@PathVariable Long id) {
         profileService.deleteProfile(id);

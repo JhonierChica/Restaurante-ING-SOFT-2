@@ -3,34 +3,37 @@ package com.restaurante.restaurantbackend.modules.employees.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateEmployeeRequest {
-    // Datos del empleado
     @NotNull(message = "El ID del cargo es obligatorio")
-    private Long positionId; // ID del cargo que ocupará
+    private Long positionId;
     
     @NotBlank(message = "Los nombres son obligatorios")
-    private String firstName; // Nombres del empleado
+    @Size(min = 1, max = 20, message = "Los nombres deben tener entre 1 y 12 caracteres")
+    private String firstName;
     
     @NotBlank(message = "Los apellidos son obligatorios")
-    private String lastName; // Apellidos del empleado
+    @Size(min = 1, max = 20, message = "Los apellidos deben tener entre 1 y 12 caracteres")
+    private String lastName;
     
-    private String documentNumber; // Número de documento
+    @Size(max = 20, message = "El número de documento no puede exceder 20 caracteres")
+    private String documentNumber;
     
-    @Email(message = "El email debe ser válido")
     @NotBlank(message = "El email es obligatorio")
-    private String email; // Email del empleado
+    @Email(message = "El email debe tener un formato válido")
+    @Size(min = 1, max = 30, message = "El email debe tener entre 1 y 30 caracteres")
+    private String email;
     
-    private String phone; // Teléfono
+    @Size(max = 10, message = "El teléfono no puede exceder 10 caracteres")
+    private String phone;
     
-    private String address; // Dirección
+    @Size(max = 30, message = "La dirección no puede exceder 30 caracteres")
+    private String address;
 }

@@ -12,5 +12,6 @@ public class CreateUserRequest {
     private String password;
     private String fullName;
     private Long profileId; // ID del perfil de seguridad
-    private Long employeeId; // ID del empleado (opcional) para vincular usuario a empleado existente
+    private Long employeeId; // ID del empleado (obligatorio) para vincular usuario a empleado
+    private Boolean active; // Estado del usuario
 }

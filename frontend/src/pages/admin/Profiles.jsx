@@ -5,9 +5,11 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Modal from '../../components/common/Modal';
 import Loading from '../../components/common/Loading';
-import { ProfileIcon } from '../../components/common/Icons';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { ProfileIcon, EditIcon, ToggleIcon, DeleteIcon } from '../../components/common/Icons';
 import { profileService } from '../../services/profileService';
 import { permissionService } from '../../services/permissionService';
+import '../../styles/Profiles.css';
 
 const Profiles = () => {
   const [profiles, setProfiles] = useState([]);
@@ -15,14 +17,20 @@ const Profiles = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'inactive'
   const [formData, setFormData] = useState({
-    code: '',
     name: '',
-    description: '',
     permissionIds: [],
   });
   const [error, setError] = useState('');
   const [groupedPermissions, setGroupedPermissions] = useState({});
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    type: 'warning',
+    title: '',
+    message: '',
+    onConfirm: null
+  });
 
   useEffect(() => {
     loadProfiles();
@@ -64,9 +72,7 @@ const Profiles = () => {
   const handleCreate = () => {
     setEditingProfile(null);
     setFormData({
-      code: '',
       name: '',
-      description: '',
       permissionIds: [],
     });
     setError('');
@@ -76,9 +82,7 @@ const Profiles = () => {
   const handleEdit = (profile) => {
     setEditingProfile(profile);
     setFormData({
-      code: profile.code,
       name: profile.name,
-      description: profile.description || '',
       permissionIds: profile.permissions.map(p => p.id),
     });
     setError('');
@@ -86,15 +90,40 @@ const Profiles = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Está seguro de eliminar este perfil?')) {
-      try {
-        await profileService.delete(id);
-        loadProfiles();
-      } catch (error) {
-        setError('Error al eliminar el perfil');
-        console.error(error);
+    setConfirmDialog({
+      isOpen: true,
+      type: 'danger',
+      title: '¿Eliminar Perfil?',
+      message: 'Esta acción eliminará permanentemente el perfil y no se puede deshacer. ¿Desea continuar?',
+      onConfirm: async () => {
+        try {
+          await profileService.delete(id);
+          loadProfiles();
+        } catch (error) {
+          setError('Error al eliminar el perfil');
+          console.error(error);
+        }
       }
-    }
+    });
+  };
+
+  const handleToggleStatus = async (id, currentStatus) => {
+    const action = currentStatus ? 'desactivar' : 'activar';
+    setConfirmDialog({
+      isOpen: true,
+      type: 'warning',
+      title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} Perfil?`,
+      message: `¿Está seguro de que desea ${action} este perfil?`,
+      onConfirm: async () => {
+        try {
+          await profileService.toggleStatus(id);
+          loadProfiles();
+        } catch (error) {
+          setError(`Error al ${action} el perfil`);
+          console.error(error);
+        }
+      }
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -145,6 +174,13 @@ const Profiles = () => {
 
   if (loading) return <Loading />;
 
+  // Filtrar perfiles según el estado seleccionado
+  const filteredProfiles = profiles.filter(profile => {
+    if (filterStatus === 'active') return profile.active;
+    if (filterStatus === 'inactive') return !profile.active;
+    return true; // 'all'
+  });
+
   return (
     <Layout>
       <div className="page-container">
@@ -158,21 +194,41 @@ const Profiles = () => {
 
         {error && <div className="error-alert">{error}</div>}
 
+        {/* Filtros */}
+        <div className="filter-buttons">
+          <button 
+            className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('all')}
+          >
+            Todos ({profiles.length})
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'active' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('active')}
+          >
+            Activos ({profiles.filter(p => p.active).length})
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'inactive' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('inactive')}
+          >
+            Inactivos ({profiles.filter(p => !p.active).length})
+          </button>
+        </div>
+
         <div className="profiles-grid">
-          {profiles.map((profile) => (
+          {filteredProfiles.map((profile) => (
             <Card key={profile.id}>
               <div className="profile-card">
                 <div className="profile-header">
                   <div>
                     <h3>{profile.name}</h3>
-                    <span className="profile-code">{profile.code}</span>
+                    <span className="profile-id">ID: {profile.id}</span>
                   </div>
                   <span className={`badge ${profile.active ? 'badge-success' : 'badge-danger'}`}>
                     {profile.active ? 'Activo' : 'Inactivo'}
                   </span>
                 </div>
-                
-                <p className="profile-description">{profile.description}</p>
                 
                 <div className="profile-permissions">
                   <strong>Permisos: {profile.permissions?.length || 0}</strong>
@@ -189,22 +245,43 @@ const Profiles = () => {
                 </div>
 
                 <div className="card-actions">
-                  <Button variant="secondary" onClick={() => handleEdit(profile)}>
-                    Editar
-                  </Button>
-                  <Button variant="danger" onClick={() => handleDelete(profile.id)}>
-                    Eliminar
-                  </Button>
+                  <button 
+                    className="icon-btn icon-btn-edit" 
+                    onClick={() => handleEdit(profile)}
+                    title="Editar perfil"
+                  >
+                    <EditIcon size={18} />
+                  </button>
+                  <button 
+                    className={`icon-btn ${profile.active ? 'icon-btn-warning' : 'icon-btn-success'}`}
+                    onClick={() => handleToggleStatus(profile.id, profile.active)}
+                    title={profile.active ? 'Desactivar perfil' : 'Activar perfil'}
+                  >
+                    <ToggleIcon size={18} />
+                  </button>
+                  <button 
+                    className="icon-btn icon-btn-danger" 
+                    onClick={() => handleDelete(profile.id)}
+                    title="Eliminar perfil"
+                  >
+                    <DeleteIcon size={18} />
+                  </button>
                 </div>
               </div>
             </Card>
           ))}
         </div>
 
-        {profiles.length === 0 && (
+        {filteredProfiles.length === 0 && (
           <div className="empty-state">
-            <p>No hay perfiles registrados</p>
-            <Button onClick={handleCreate}>Crear primer perfil</Button>
+            <p>
+              {filterStatus === 'all' && 'No hay perfiles registrados'}
+              {filterStatus === 'active' && 'No hay perfiles activos'}
+              {filterStatus === 'inactive' && 'No hay perfiles inactivos'}
+            </p>
+            {filterStatus === 'all' && (
+              <Button onClick={handleCreate}>Crear primer perfil</Button>
+            )}
           </div>
         )}
 
@@ -215,38 +292,35 @@ const Profiles = () => {
           size="large"
         >
           <form onSubmit={handleSubmit} className="profile-form">
+            <div className="info-box">
+              <span className="info-icon">ℹ️</span>
+              <div>
+                <strong>Importante:</strong> El nombre del perfil debe tener máximo 12 caracteres.
+                Ejemplos válidos: MESERO, CAJERO, ADMINISTRADOR, SUPERVISOR
+              </div>
+            </div>
+
             <div className="form-grid-3">
               <Input
-                label="Código *"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="Ej: MESERO"
-                required
-                disabled={editingProfile !== null}
-              />
-
-              <Input
-                label="Nombre *"
+                label="Nombre del Perfil *"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ej: Mesero"
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  if (value.length <= 12) {
+                    setFormData({ ...formData, name: value });
+                  }
+                }}
+                placeholder="Ej: ADMINISTRADOR"
+                maxLength={12}
                 required
               />
-
-              <div className="form-group col-span-1">
-                <label>Descripción</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe el perfil"
-                  className="form-input"
-                />
+              <div className="char-counter">
+                {formData.name.length}/12 caracteres
               </div>
             </div>
 
             <div className="permissions-section">
-              <h4>Permisos del Perfil</h4>
+              <h4>Permisos del Perfil ({formData.permissionIds.length} seleccionados)</h4>
               <p className="text-muted">Selecciona los permisos que tendrá este perfil</p>
               
               {Object.keys(groupedPermissions).map(module => (
@@ -297,206 +371,16 @@ const Profiles = () => {
         </Modal>
       </div>
 
-      <style jsx>{`
-        .profiles-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 1.5rem;
-          margin-top: 1.5rem;
-        }
-
-        .profile-card {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-
-        .profile-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: start;
-        }
-
-        .profile-header h3 {
-          margin: 0 0 0.5rem 0;
-          color: var(--color-text-primary);
-        }
-
-        .profile-code {
-          display: inline-block;
-          padding: 0.25rem 0.75rem;
-          background: var(--color-primary-light);
-          color: var(--color-primary);
-          border-radius: 12px;
-          font-size: 0.875rem;
-          font-weight: 600;
-        }
-
-        .profile-description {
-          color: var(--color-text-secondary);
-          font-size: 0.875rem;
-          margin: 0;
-        }
-
-        .profile-permissions {
-          border-top: 1px solid var(--color-border);
-          padding-top: 1rem;
-        }
-
-        .profile-permissions strong {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: var(--color-text-primary);
-        }
-
-        .permissions-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-        }
-
-        .permission-tag {
-          padding: 0.25rem 0.75rem;
-          background: var(--color-background);
-          border: 1px solid var(--color-border);
-          border-radius: 12px;
-          font-size: 0.75rem;
-          color: var(--color-text-secondary);
-        }
-
-        .card-actions {
-          display: flex;
-          gap: 0.5rem;
-          margin-top: auto;
-        }
-
-        .badge {
-          padding: 0.25rem 0.75rem;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-
-        .badge-success {
-          background: #d4edda;
-          color: #155724;
-        }
-
-        .badge-danger {
-          background: #f8d7da;
-          color: #721c24;
-        }
-
-        .profile-form {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .form-textarea {
-          width: 100%;
-          padding: 8px 10px;
-          border: 1px solid var(--color-border);
-          border-radius: 8px;
-          font-family: inherit;
-          font-size: 14px;
-          resize: vertical;
-        }
-
-        .permissions-section {
-          max-height: 350px;
-          overflow-y: auto;
-          padding: 12px;
-          background: var(--color-background);
-          border-radius: 8px;
-        }
-
-        .permissions-section h4 {
-          margin: 0 0 6px 0;
-          color: var(--color-text-primary);
-          font-size: 14px;
-        }
-
-        .text-muted {
-          color: var(--color-text-secondary);
-          font-size: 12px;
-        }
-
-        .permission-module {
-          margin-top: 12px;
-        }
-
-        .module-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          padding-bottom: 6px;
-          border-bottom: 2px solid var(--color-border);
-        }
-
-        .module-header h5 {
-          margin: 0;
-          color: var(--color-primary);
-          font-size: 13px;
-        }
-
-        .permission-list {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .permission-checkbox {
-          display: flex;
-          align-items: start;
-          gap: 8px;
-          padding: 8px;
-          background: white;
-          border: 1px solid var(--color-border);
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .permission-checkbox:hover {
-          border-color: var(--color-primary);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .permission-checkbox input[type="checkbox"] {
-          margin-top: 2px;
-          cursor: pointer;
-        }
-
-        .permission-checkbox div {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .permission-checkbox strong {
-          color: var(--color-text-primary);
-          font-size: 13px;
-        }
-
-        .permission-checkbox span {
-          font-size: 11px;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 12px;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 3rem;
-          color: var(--color-text-secondary);
-        }
-      `}</style>
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        confirmText={confirmDialog.type === 'danger' ? 'Eliminar' : 'Confirmar'}
+        cancelText="Cancelar"
+      />
     </Layout>
   );
 };

@@ -6,7 +6,7 @@ import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
-import { UsersIcon } from '../../components/common/Icons';
+import { UsersIcon, EditIcon, DeleteIcon, ToggleIcon } from '../../components/common/Icons';
 import { userService } from '../../services/userService';
 import { profileService } from '../../services/profileService';
 import { employeeService } from '../../services/employeeService';
@@ -24,7 +24,6 @@ const Users = () => {
     password: '',
     profileId: '',
     employeeId: '',
-    active: true,
   });
 
   useEffect(() => {
@@ -81,7 +80,6 @@ const Users = () => {
       password: '',
       profileId: profiles[0]?.id || '',
       employeeId: '',
-      active: true,
     });
     setShowModal(true);
   };
@@ -93,9 +91,22 @@ const Users = () => {
       fullName: user.fullName || '',
       password: '',
       profileId: user.profile?.id || '',
-      active: user.active !== undefined ? user.active : true,
     });
     setShowModal(true);
+  };
+
+  const handleToggleStatus = async (userId, currentStatus) => {
+    const action = currentStatus ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Está seguro de ${action} este usuario?`)) {
+      try {
+        await userService.updateUser(userId, { active: !currentStatus });
+        alert(`Usuario ${action === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
+        loadUsers();
+      } catch (error) {
+        console.error(`Error al ${action} usuario:`, error);
+        alert(`Error al ${action} usuario`);
+      }
+    }
   };
 
   const handleDelete = async (user) => {
@@ -141,9 +152,13 @@ const Users = () => {
         fullName: formData.fullName ? formData.fullName.trim() : '',
         password: formData.password ? formData.password.trim() : undefined,
         profileId: parseInt(formData.profileId),
-        employeeId: formData.employeeId ? parseInt(formData.employeeId) : null,
-        active: formData.active,
       };
+      
+      // Solo incluir employeeId si se está creando (no editando)
+      if (!editingUser) {
+        dataToSubmit.employeeId = parseInt(formData.employeeId);
+        dataToSubmit.active = true; // Los nuevos usuarios siempre se crean activos
+      }
       
       // Si es edición y no hay password, no enviar el campo
       if (editingUser && !dataToSubmit.password) {
@@ -190,63 +205,75 @@ const Users = () => {
     });
   };
 
-  const columns = [
-    {
-      header: 'Usuario',
-      accessor: 'username',
-      render: (user) => (
-        <div>
-          <strong>{user.username}</strong>
-          <br />
-          <small className="text-muted">{user.fullName}</small>
-        </div>
-      ),
-    },
-    {
-      header: 'Perfil',
-      accessor: 'profile',
-      render: (user) => (
-        <span className="profile-badge">
-          {user.profile?.name || 'Sin perfil'}
-        </span>
-      ),
-    },
-    {
-      header: 'Fecha de Registro',
-      accessor: 'createdAt',
-      render: (user) => user.createdAt ? new Date(user.createdAt).toLocaleDateString('es-ES') : '-',
-    },
-    {
-      header: 'Estado',
-      accessor: 'active',
-      render: (user) => (
-        <span className={`badge ${ user.active ? 'badge-success' : 'badge-danger'}`}>
-          {user.active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-  ];
-
   if (loading) return <Loading message="Cargando usuarios..." />;
 
   return (
     <Layout>
       <div className="page-container">
-        <Card
-          title={<><UsersIcon size={24} /> Gestión de Usuarios</>}
-          actions={
-            <Button onClick={handleAdd}>
-              + Nuevo Usuario
-            </Button>
-          }
-        >
-          <Table
-            columns={columns}
-            data={users}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        </Card>
+        <div className="page-header">
+          <div>
+            <h1><UsersIcon size={32} /> Gestión de Usuarios</h1>
+            <p>Administra los usuarios y sus credenciales de acceso</p>
+          </div>
+          <Button onClick={handleAdd}>+ Nuevo Usuario</Button>
+        </div>
+
+        <div className="profiles-grid">
+          {users.map((user) => (
+            <Card key={user.id}>
+              <div className="profile-card">
+                <div className="profile-header">
+                  <div>
+                    <h3>{user.username}</h3>
+                    <span className="profile-id">{user.fullName}</span>
+                  </div>
+                  <span className={`badge ${user.active ? 'badge-success' : 'badge-danger'}`}>
+                    {user.active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                
+                <div className="profile-permissions">
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>Perfil:</strong> {user.profile?.name || 'Sin perfil'}
+                  </div>
+                  <div>
+                    <strong>Fecha de registro:</strong> {user.createdAt ? new Date(user.createdAt).toLocaleDateString('es-ES') : '-'}
+                  </div>
+                </div>
+
+                <div className="card-actions">
+                  <button 
+                    className="icon-btn icon-btn-edit" 
+                    onClick={() => handleEdit(user)}
+                    title="Editar usuario"
+                  >
+                    <EditIcon size={18} />
+                  </button>
+                  <button 
+                    className={`icon-btn ${user.active ? 'icon-btn-warning' : 'icon-btn-success'}`}
+                    onClick={() => handleToggleStatus(user.id, user.active)}
+                    title={user.active ? 'Desactivar usuario' : 'Activar usuario'}
+                  >
+                    <ToggleIcon size={18} />
+                  </button>
+                  <button 
+                    className="icon-btn icon-btn-danger" 
+                    onClick={() => handleDelete(user)}
+                    title="Eliminar usuario"
+                  >
+                    <DeleteIcon size={18} />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {users.length === 0 && (
+          <div className="empty-state">
+            <p>No hay usuarios registrados</p>
+          </div>
+        )}
 
         <Modal
           isOpen={showModal}
@@ -323,24 +350,6 @@ const Users = () => {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="input-group col-span-2">
-              <label className="input-label">
-                Estado del Usuario
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  name="active"
-                  checked={formData.active}
-                  onChange={handleChange}
-                  style={{ cursor: 'pointer', width: 'auto' }}
-                />
-                <span>{formData.active ? 'Activo' : 'Inactivo'}</span>
-              </label>
-              <small className="helper-text">
-                Desactive para bloquear el acceso del usuario al sistema
-              </small>
             </div>
           </div>
         </Modal>

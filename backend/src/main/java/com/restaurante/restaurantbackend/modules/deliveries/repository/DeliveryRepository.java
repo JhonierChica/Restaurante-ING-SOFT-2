@@ -15,17 +15,10 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     
     List<Delivery> findByStatusOrderByCreatedAtDesc(DeliveryStatus status);
     
-    List<Delivery> findByDeliveryPersonOrderByCreatedAtDesc(String deliveryPerson);
-    
     List<Delivery> findByCreatedAtBetweenOrderByCreatedAtDesc(
             LocalDateTime startDate, 
             LocalDateTime endDate
     );
-    
-    List<Delivery> findByClientPhoneOrderByCreatedAtDesc(String clientPhone);
-    
-    @Query("SELECT d FROM Delivery d WHERE d.status IN ('PENDING', 'ASSIGNED', 'IN_TRANSIT') ORDER BY d.createdAt DESC")
-    List<Delivery> findActiveDeliveries();
     
     @Query("SELECT d FROM Delivery d ORDER BY d.createdAt DESC")
     List<Delivery> findAllOrderByCreatedAtDesc();

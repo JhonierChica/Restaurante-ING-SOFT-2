@@ -71,20 +71,20 @@ public class AuthService {
             throw new RuntimeException("User has no profile assigned. Contact administrator.");
         }
         
-        System.out.println("✓ Profile found: " + user.getProfile().getCode() + 
+        System.out.println("✓ Profile found: " + user.getProfile().getName() + 
                          " (Active=" + user.getProfile().getActive() + 
                          ", Permissions=" + user.getProfile().getPermissions().size() + ")");
         
         // Verificar que el perfil esté activo
         if (!user.getProfile().getActive()) {
-            System.err.println("❌ Login failed: Profile is deactivated - " + user.getProfile().getCode());
+            System.err.println("❌ Login failed: Profile is deactivated - " + user.getProfile().getName());
             throw new RuntimeException("Your profile has been deactivated. Contact administrator.");
         }
 
         // Construir ProfileResponse
         ProfileResponse profileResponse = new ProfileResponse(
             user.getProfile().getId(),
-            user.getProfile().getCode(),
+            user.getProfile().getName(), // Usar name como code (ya que code es @Transient)
             user.getProfile().getName(),
             user.getProfile().getDescription(),
             user.getProfile().getPermissions().stream()
@@ -103,7 +103,7 @@ public class AuthService {
         // Generar token simple (en producción usar JWT)
         String token = "Bearer_" + user.getId() + "_" + System.currentTimeMillis();
         
-        System.out.println("✅ Login successful for user: " + username + " (Role: " + user.getProfile().getCode() + ")");
+        System.out.println("✅ Login successful for user: " + username + " (Role: " + user.getProfile().getName() + ")");
 
         // Retornar información del usuario autenticado
         return LoginResponse.builder()
@@ -138,7 +138,7 @@ public class AuthService {
             return false;
         }
 
-        String userProfileCode = user.getProfile().getCode();
+        String userProfileCode = user.getProfile().getName(); // Usar name en lugar de code
         for (String profileCode : profileCodes) {
             if (userProfileCode.equals(profileCode)) {
                 return true;
@@ -156,6 +156,6 @@ public class AuthService {
     public String getUserProfileCode(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return user.getProfile() != null ? user.getProfile().getCode() : null;
+        return user.getProfile() != null ? user.getProfile().getName() : null; // Usar name en lugar de code
     }
 }

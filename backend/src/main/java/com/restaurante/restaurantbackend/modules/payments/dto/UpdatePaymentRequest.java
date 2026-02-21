@@ -13,6 +13,4 @@ import java.math.BigDecimal;
 public class UpdatePaymentRequest {
     private BigDecimal amount;
     private Payment.PaymentStatus status;
-    private String referenceNumber;
-    private String notes;
 }

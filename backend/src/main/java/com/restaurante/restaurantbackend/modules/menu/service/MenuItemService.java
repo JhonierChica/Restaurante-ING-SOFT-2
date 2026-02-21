@@ -33,16 +33,9 @@ public class MenuItemService {
         MenuItem menuItem = new MenuItem();
         menuItem.setName(request.getName());
         menuItem.setDescription(request.getDescription());
-        menuItem.setPrice(request.getPrice());
+        menuItem.setPriceFromBigDecimal(request.getPrice());
         menuItem.setCategory(category);
-        menuItem.setImageUrl(request.getImageUrl());
-        menuItem.setPreparationTime(request.getPreparationTime());
-        menuItem.setIsVegetarian(request.getIsVegetarian() != null ? request.getIsVegetarian() : false);
-        menuItem.setIsVegan(request.getIsVegan() != null ? request.getIsVegan() : false);
-        menuItem.setIsGlutenFree(request.getIsGlutenFree() != null ? request.getIsGlutenFree() : false);
-        menuItem.setIsSpicy(request.getIsSpicy() != null ? request.getIsSpicy() : false);
-        menuItem.setCalories(request.getCalories());
-        menuItem.setAvailable(true);
+        menuItem.setAvailable(true); // Por defecto activo
 
         MenuItem savedMenuItem = menuItemRepository.save(menuItem);
         return mapToResponse(savedMenuItem);
@@ -117,7 +110,7 @@ public class MenuItemService {
         }
 
         if (request.getPrice() != null) {
-            menuItem.setPrice(request.getPrice());
+            menuItem.setPriceFromBigDecimal(request.getPrice());
         }
 
         if (request.getCategoryId() != null) {
@@ -126,36 +119,8 @@ public class MenuItemService {
             menuItem.setCategory(category);
         }
 
-        if (request.getImageUrl() != null) {
-            menuItem.setImageUrl(request.getImageUrl());
-        }
-
         if (request.getAvailable() != null) {
             menuItem.setAvailable(request.getAvailable());
-        }
-
-        if (request.getPreparationTime() != null) {
-            menuItem.setPreparationTime(request.getPreparationTime());
-        }
-
-        if (request.getIsVegetarian() != null) {
-            menuItem.setIsVegetarian(request.getIsVegetarian());
-        }
-
-        if (request.getIsVegan() != null) {
-            menuItem.setIsVegan(request.getIsVegan());
-        }
-
-        if (request.getIsGlutenFree() != null) {
-            menuItem.setIsGlutenFree(request.getIsGlutenFree());
-        }
-
-        if (request.getIsSpicy() != null) {
-            menuItem.setIsSpicy(request.getIsSpicy());
-        }
-
-        if (request.getCalories() != null) {
-            menuItem.setCalories(request.getCalories());
         }
 
         MenuItem updatedMenuItem = menuItemRepository.save(menuItem);
@@ -181,7 +146,7 @@ public class MenuItemService {
                 .id(menuItem.getId())
                 .name(menuItem.getName())
                 .description(menuItem.getDescription())
-                .price(menuItem.getPrice())
+                .price(menuItem.getPriceAsBigDecimal())
                 .categoryId(menuItem.getCategory().getId())
                 .categoryName(menuItem.getCategory().getName())
                 .imageUrl(menuItem.getImageUrl())

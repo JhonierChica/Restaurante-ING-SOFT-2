@@ -6,6 +6,11 @@ export const orderService = {
     return response.data;
   },
 
+  getAllOrdersForPayments: async () => {
+    const response = await apiClient.get('/orders/all-for-payments');
+    return response.data;
+  },
+
   getOrderById: async (id) => {
     const response = await apiClient.get(`/orders/${id}`);
     return response.data;

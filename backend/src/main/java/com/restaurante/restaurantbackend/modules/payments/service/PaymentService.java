@@ -49,10 +49,8 @@ public class PaymentService {
         Payment payment = new Payment();
         payment.setOrder(order);
         payment.setPaymentMethod(paymentMethod);
-        payment.setAmount(request.getAmount());
-        payment.setStatus(Payment.PaymentStatus.PENDIENTE);
-        payment.setReferenceNumber(request.getReferenceNumber());
-        payment.setNotes(request.getNotes());
+        payment.setAmountFromBigDecimal(request.getAmount());
+        payment.setPaymentStatus(Payment.PaymentStatus.PENDIENTE);
 
         Payment savedPayment = paymentRepository.save(payment);
         return mapToResponse(savedPayment);
@@ -74,7 +72,15 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
-        return paymentRepository.findByStatus(status).stream()
+        // Convertir el enum a String para buscar en BD
+        String statusCode = "";
+        switch (status) {
+            case COMPLETADO: statusCode = "C"; break;
+            case CANCELADO: statusCode = "X"; break;
+            case FALLIDO: statusCode = "F"; break;
+            default: statusCode = "P";
+        }
+        return paymentRepository.findByStatus(statusCode).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -98,19 +104,11 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
 
         if (request.getAmount() != null) {
-            payment.setAmount(request.getAmount());
+            payment.setAmountFromBigDecimal(request.getAmount());
         }
 
         if (request.getStatus() != null) {
-            payment.setStatus(request.getStatus());
-        }
-
-        if (request.getReferenceNumber() != null) {
-            payment.setReferenceNumber(request.getReferenceNumber());
-        }
-
-        if (request.getNotes() != null) {
-            payment.setNotes(request.getNotes());
+            payment.setPaymentStatus(request.getStatus());
         }
 
         Payment updatedPayment = paymentRepository.save(payment);
@@ -129,12 +127,8 @@ public class PaymentService {
         response.setOrderId(payment.getOrder().getId());
         response.setPaymentMethodId(payment.getPaymentMethod().getId());
         response.setPaymentMethodName(payment.getPaymentMethod().getName());
-        response.setAmount(payment.getAmount());
-        response.setStatus(payment.getStatus());
-        response.setReferenceNumber(payment.getReferenceNumber());
-        response.setNotes(payment.getNotes());
-        response.setCreatedAt(payment.getCreatedAt());
-        response.setUpdatedAt(payment.getUpdatedAt());
+        response.setAmount(payment.getAmountAsBigDecimal());
+        response.setStatus(payment.getPaymentStatus());
         return response;
     }
 }

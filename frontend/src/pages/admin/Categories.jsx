@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
-import Table from '../../components/common/Table';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
-import { CategoryIcon } from '../../components/common/Icons';
+import { CategoryIcon, EditIcon, DeleteIcon, ToggleIcon } from '../../components/common/Icons';
 import { categoryService } from '../../services/categoryService';
 
 const Categories = () => {
@@ -51,6 +50,20 @@ const Categories = () => {
     setShowModal(true);
   };
 
+  const handleToggleStatus = async (categoryId, currentStatus) => {
+    const action = currentStatus ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Está seguro de ${action} esta categoría?`)) {
+      try {
+        await categoryService.updateCategory(categoryId, { active: !currentStatus });
+        alert(`Categoría ${action === 'desactivar' ? 'desactivada' : 'activada'} exitosamente`);
+        loadCategories();
+      } catch (error) {
+        console.error(`Error al ${action} categoría:`, error);
+        alert(`Error al ${action} categoría`);
+      }
+    }
+  };
+
   const handleDelete = async (category) => {
     if (window.confirm(`¿Está seguro de eliminar la categoría ${category.name}?`)) {
       try {
@@ -88,32 +101,78 @@ const Categories = () => {
     });
   };
 
-  const columns = [
-    { header: 'ID', field: 'id' },
-    { header: 'Nombre', field: 'name' },
-    { header: 'Descripción', field: 'description' },
-  ];
-
   if (loading) return <Loading message="Cargando categorías..." />;
 
   return (
     <Layout>
       <div className="page-container">
-        <Card
-          title={<><CategoryIcon size={24} /> Gestión de Categorías</>}
-          actions={
-            <Button onClick={handleAdd}>
-              + Nueva Categoría
-            </Button>
-          }
-        >
-          <Table
-            columns={columns}
-            data={categories}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        </Card>
+        <div className="page-header">
+          <div>
+            <h1><CategoryIcon size={32} /> Gestión de Categorías</h1>
+            <p>Administra las categorías del menú</p>
+          </div>
+          <Button onClick={handleAdd}>+ Nueva Categoría</Button>
+        </div>
+
+        <div className="profiles-grid">
+          {categories.map((category) => (
+            <Card key={category.id}>
+              <div className="profile-card">
+                <div className="profile-header">
+                  <div>
+                    <h3>{category.name}</h3>
+                    <span className="profile-id">ID: {category.id}</span>
+                  </div>
+                  <span className={`badge ${category.active ? 'badge-success' : 'badge-danger'}`}>
+                    {category.active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                
+                <div className="profile-permissions">
+                  {category.description && (
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <small className="text-muted">{category.description}</small>
+                    </div>
+                  )}
+                  <div>
+                    <strong>Fecha de creación:</strong> {category.createdAt ? new Date(category.createdAt).toLocaleDateString('es-ES') : '-'}
+                  </div>
+                </div>
+
+                <div className="card-actions">
+                  <button 
+                    className="icon-btn icon-btn-edit" 
+                    onClick={() => handleEdit(category)}
+                    title="Editar categoría"
+                  >
+                    <EditIcon size={18} />
+                  </button>
+                  <button 
+                    className={`icon-btn ${category.active ? 'icon-btn-warning' : 'icon-btn-success'}`}
+                    onClick={() => handleToggleStatus(category.id, category.active)}
+                    title={category.active ? 'Desactivar categoría' : 'Activar categoría'}
+                  >
+                    <ToggleIcon size={18} />
+                  </button>
+                  <button 
+                    className="icon-btn icon-btn-danger" 
+                    onClick={() => handleDelete(category)}
+                    title="Eliminar categoría"
+                  >
+                    <DeleteIcon size={18} />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {categories.length === 0 && (
+          <div className="empty-state">
+            <p>No hay categorías registradas</p>
+            <Button onClick={handleAdd}>Crear primera categoría</Button>
+          </div>
+        )}
 
         <Modal
           isOpen={showModal}

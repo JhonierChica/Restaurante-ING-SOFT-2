@@ -9,7 +9,6 @@ import com.restaurante.restaurantbackend.modules.deliveries.repository.DeliveryR
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,20 +26,7 @@ public class DeliveryService {
     public DeliveryResponse createDelivery(CreateDeliveryRequest request) {
         Delivery delivery = new Delivery();
         delivery.setOrderId(request.getOrderId());
-        delivery.setClientName(request.getClientName());
-        delivery.setClientPhone(request.getClientPhone());
-        delivery.setDeliveryAddress(request.getDeliveryAddress());
-        delivery.setAddressReference(request.getAddressReference());
-        delivery.setNeighborhood(request.getNeighborhood());
-        delivery.setCity(request.getCity());
-        delivery.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
-        delivery.setTotalAmount(request.getTotalAmount() != null ? request.getTotalAmount() : BigDecimal.ZERO);
         delivery.setStatus(DeliveryStatus.PENDING);
-        delivery.setDeliveryPerson(request.getDeliveryPerson());
-        delivery.setEstimatedTime(request.getEstimatedTime() != null ? request.getEstimatedTime() : 30);
-        delivery.setNotes(request.getNotes());
-        delivery.setPaymentMethod(request.getPaymentMethod());
-        delivery.setPaymentStatus(request.getPaymentStatus() != null ? request.getPaymentStatus() : "PENDING");
 
         Delivery savedDelivery = deliveryRepository.save(delivery);
         return mapToResponse(savedDelivery);
@@ -48,10 +34,22 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public List<DeliveryResponse> getAllDeliveries() {
-        return deliveryRepository.findAllOrderByCreatedAtDesc()
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        try {
+            System.out.println("[DeliveryService] getAllDeliveries() called");
+            List<Delivery> deliveries = deliveryRepository.findAllOrderByCreatedAtDesc();
+            System.out.println("[DeliveryService] Found " + deliveries.size() + " deliveries in database");
+            
+            List<DeliveryResponse> responses = deliveries.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+            
+            System.out.println("[DeliveryService] Mapped to " + responses.size() + " responses");
+            return responses;
+        } catch (Exception e) {
+            System.err.println("[DeliveryService] ERROR in getAllDeliveries: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -63,8 +61,11 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public List<DeliveryResponse> getActiveDeliveries() {
-        return deliveryRepository.findActiveDeliveries()
+        return deliveryRepository.findAllOrderByCreatedAtDesc()
                 .stream()
+                .filter(d -> d.getStatus() == DeliveryStatus.PENDING 
+                          || d.getStatus() == DeliveryStatus.IN_TRANSIT 
+                          || d.getStatus() == DeliveryStatus.DELIVERED)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -73,14 +74,6 @@ public class DeliveryService {
     public List<DeliveryResponse> getDeliveriesByStatus(String statusString) {
         DeliveryStatus status = DeliveryStatus.valueOf(statusString.toUpperCase());
         return deliveryRepository.findByStatusOrderByCreatedAtDesc(status)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<DeliveryResponse> getDeliveriesByPerson(String deliveryPerson) {
-        return deliveryRepository.findByDeliveryPersonOrderByCreatedAtDesc(deliveryPerson)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -109,47 +102,24 @@ public class DeliveryService {
         DeliveryStatus newStatus = DeliveryStatus.valueOf(request.getStatus().toUpperCase());
         delivery.setStatus(newStatus);
 
-        if (request.getDeliveryPerson() != null) {
-            delivery.setDeliveryPerson(request.getDeliveryPerson());
-        }
-
-        if (request.getNotes() != null) {
-            delivery.setNotes(request.getNotes());
-        }
-
-        // Actualizar timestamps según el estado
-        if (newStatus == DeliveryStatus.ASSIGNED && delivery.getAssignedAt() == null) {
-            delivery.setAssignedAt(LocalDateTime.now());
-        } else if (newStatus == DeliveryStatus.DELIVERED && delivery.getDeliveredAt() == null) {
-            delivery.setDeliveredAt(LocalDateTime.now());
-        }
-
         Delivery updatedDelivery = deliveryRepository.save(delivery);
         return mapToResponse(updatedDelivery);
     }
 
     private DeliveryResponse mapToResponse(Delivery delivery) {
-        DeliveryResponse response = new DeliveryResponse();
-        response.setId(delivery.getId());
-        response.setOrderId(delivery.getOrderId());
-        response.setClientName(delivery.getClientName());
-        response.setClientPhone(delivery.getClientPhone());
-        response.setDeliveryAddress(delivery.getDeliveryAddress());
-        response.setAddressReference(delivery.getAddressReference());
-        response.setNeighborhood(delivery.getNeighborhood());
-        response.setCity(delivery.getCity());
-        response.setDeliveryFee(delivery.getDeliveryFee());
-        response.setTotalAmount(delivery.getTotalAmount());
-        response.setStatus(delivery.getStatus().name());
-        response.setDeliveryPerson(delivery.getDeliveryPerson());
-        response.setAssignedAt(delivery.getAssignedAt());
-        response.setDeliveredAt(delivery.getDeliveredAt());
-        response.setEstimatedTime(delivery.getEstimatedTime());
-        response.setNotes(delivery.getNotes());
-        response.setPaymentMethod(delivery.getPaymentMethod());
-        response.setPaymentStatus(delivery.getPaymentStatus());
-        response.setCreatedAt(delivery.getCreatedAt());
-        response.setUpdatedAt(delivery.getUpdatedAt());
-        return response;
+        try {
+            System.out.println("[DeliveryService] Mapping delivery ID: " + delivery.getId() + ", OrderID: " + delivery.getOrderId());
+            DeliveryResponse response = new DeliveryResponse();
+            response.setId(delivery.getId());
+            response.setOrderId(delivery.getOrderId());
+            response.setStatus(delivery.getStatus().name());
+            response.setCreatedAt(delivery.getCreatedAt());
+            System.out.println("[DeliveryService] Successfully mapped delivery ID: " + delivery.getId());
+            return response;
+        } catch (Exception e) {
+            System.err.println("[DeliveryService] ERROR mapping delivery ID " + delivery.getId() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 }

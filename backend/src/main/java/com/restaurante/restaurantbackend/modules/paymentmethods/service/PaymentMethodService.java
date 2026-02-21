@@ -29,8 +29,6 @@ public class PaymentMethodService {
 
         PaymentMethod paymentMethod = new PaymentMethod();
         paymentMethod.setName(request.getName());
-        paymentMethod.setType(request.getType());
-        paymentMethod.setDescription(request.getDescription());
         paymentMethod.setIsActive(true);
 
         PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
@@ -46,14 +44,7 @@ public class PaymentMethodService {
 
     @Transactional(readOnly = true)
     public List<PaymentMethodResponse> getActivePaymentMethods() {
-        return paymentMethodRepository.findByIsActiveTrue().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getPaymentMethodsByType(PaymentMethod.PaymentType type) {
-        return paymentMethodRepository.findByType(type).stream()
+        return paymentMethodRepository.findByStatus("A").stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -76,14 +67,6 @@ public class PaymentMethodService {
             paymentMethod.setName(request.getName());
         }
 
-        if (request.getType() != null) {
-            paymentMethod.setType(request.getType());
-        }
-
-        if (request.getDescription() != null) {
-            paymentMethod.setDescription(request.getDescription());
-        }
-
         if (request.getIsActive() != null) {
             paymentMethod.setIsActive(request.getIsActive());
         }
@@ -98,15 +81,20 @@ public class PaymentMethodService {
         paymentMethodRepository.delete(paymentMethod);
     }
 
+    public PaymentMethodResponse togglePaymentMethodStatus(Long id) {
+        PaymentMethod paymentMethod = paymentMethodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment method not found with id: " + id));
+        
+        paymentMethod.setIsActive(!paymentMethod.getIsActive());
+        PaymentMethod updatedPaymentMethod = paymentMethodRepository.save(paymentMethod);
+        return mapToResponse(updatedPaymentMethod);
+    }
+
     private PaymentMethodResponse mapToResponse(PaymentMethod paymentMethod) {
         PaymentMethodResponse response = new PaymentMethodResponse();
         response.setId(paymentMethod.getId());
         response.setName(paymentMethod.getName());
-        response.setType(paymentMethod.getType());
-        response.setDescription(paymentMethod.getDescription());
         response.setIsActive(paymentMethod.getIsActive());
-        response.setCreatedAt(paymentMethod.getCreatedAt());
-        response.setUpdatedAt(paymentMethod.getUpdatedAt());
         return response;
     }
 }

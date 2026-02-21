@@ -5,14 +5,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "menu_items")
+@Table(name = "menú")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,50 +17,68 @@ public class MenuItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_menu")
     private Long id;
 
-    @Column(nullable = false, length = 150)
+    @Column(name = "nombre_menu", nullable = false, length = 10)
     private String name;
 
-    @Column(length = 500)
+    @Column(name = "descripcion", nullable = false, length = 30)
     private String description;
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price;
+    @Column(name = "precio", nullable = false)
+    private Float price; // Usar Float porque la BD usa REAL
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "id_categoria", nullable = false)
     private Category category;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "estado", nullable = false, length = 1)
+    private String status = "A"; // A=Activo, I=Inactivo
+
+    // Campos adicionales no mapeados a BD
+    @Transient
     private String imageUrl;
-
-    @Column(nullable = false)
-    private Boolean available = true;
-
-    @Column(name = "preparation_time")
-    private Integer preparationTime; // en minutos
-
-    @Column(name = "is_vegetarian")
-    private Boolean isVegetarian = false;
-
-    @Column(name = "is_vegan")
-    private Boolean isVegan = false;
-
-    @Column(name = "is_gluten_free")
-    private Boolean isGlutenFree = false;
-
-    @Column(name = "is_spicy")
-    private Boolean isSpicy = false;
-
-    @Column
+    
+    @Transient
+    private Integer preparationTime;
+    
+    @Transient
+    private Boolean isVegetarian;
+    
+    @Transient
+    private Boolean isVegan;
+    
+    @Transient
+    private Boolean isGlutenFree;
+    
+    @Transient
+    private Boolean isSpicy;
+    
+    @Transient
     private Integer calories;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    
+    @Transient
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    
+    @Transient
     private LocalDateTime updatedAt;
+    
+    // Método helper para compatibilidad
+    public Boolean getAvailable() {
+        return "A".equals(this.status);
+    }
+    
+    public void setAvailable(Boolean available) {
+        this.status = available ? "A" : "I";
+    }
+    
+    // Helper para convertir Float a BigDecimal si es necesario
+    public BigDecimal getPriceAsBigDecimal() {
+        return price != null ? BigDecimal.valueOf(price) : BigDecimal.ZERO;
+    }
+    
+    public void setPriceFromBigDecimal(BigDecimal price) {
+        this.price = price != null ? price.floatValue() : 0f;
+    }
 }

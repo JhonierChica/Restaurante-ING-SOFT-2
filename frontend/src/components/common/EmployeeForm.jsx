@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import '../../styles/Forms.css';
 
-const EmployeeForm = ({ onComplete, onCancel, positions }) => {
+const EmployeeForm = ({ onComplete, onCancel, positions, serverError, initialData }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -10,6 +11,21 @@ const EmployeeForm = ({ onComplete, onCancel, positions }) => {
     address: '',
     positionId: '',
   });
+
+  // Cargar datos iniciales cuando se edita
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        firstName: initialData.firstName || '',
+        lastName: initialData.lastName || '',
+        email: initialData.email || '',
+        documentNumber: initialData.documentNumber || '',
+        phone: initialData.phone || '',
+        address: initialData.address || '',
+        positionId: initialData.position?.id || '',
+      });
+    }
+  }, [initialData]);
 
   const [errors, setErrors] = useState({});
 
@@ -74,6 +90,20 @@ const EmployeeForm = ({ onComplete, onCancel, positions }) => {
 
   return (
     <form onSubmit={handleSubmit} className="employee-form">
+      {serverError && (
+        <div className="error-alert" style={{ 
+          padding: '1rem', 
+          marginBottom: '1rem', 
+          backgroundColor: '#f8d7da', 
+          color: '#721c24', 
+          borderRadius: '6px',
+          border: '1px solid #f5c6cb',
+          whiteSpace: 'pre-line'
+        }}>
+          ❌ {serverError}
+        </div>
+      )}
+      
       <div className="form-section">
         <h3>👤 Información Personal</h3>
         <div className="form-grid-2">
@@ -194,148 +224,9 @@ const EmployeeForm = ({ onComplete, onCancel, positions }) => {
           Cancelar
         </button>
         <button type="submit" className="btn-submit">
-          ✅ Crear Empleado
+          {initialData ? '💾 Actualizar Empleado' : '✅ Crear Empleado'}
         </button>
       </div>
-
-      <style jsx>{`
-        .employee-form {
-          padding: 0;
-        }
-
-        .form-section {
-          margin-bottom: 14px;
-        }
-
-        .form-section:last-child {
-          margin-bottom: 0;
-        }
-
-        .form-section h3 {
-          margin-top: 0;
-          margin-bottom: 8px;
-          color: #333;
-          font-size: 14px;
-        }
-
-        .form-grid-2 {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .form-group.col-span-2 {
-          grid-column: span 2;
-        }
-
-        .form-group label {
-          margin-bottom: 4px;
-          font-weight: 500;
-          color: #555;
-          font-size: 13px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-          padding: 8px 10px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 14px;
-        }
-
-        .form-group input.error,
-        .form-group select.error {
-          border-color: #dc3545;
-        }
-
-        .error-text {
-          color: #dc3545;
-          font-size: 11px;
-          margin-top: 2px;
-        }
-
-        .info-card {
-          padding: 10px;
-          background: #f8f9fa;
-          border-radius: 6px;
-          border: 1px solid #e0e0e0;
-        }
-
-        .info-label {
-          font-size: 11px;
-          color: #666;
-          margin-bottom: 4px;
-        }
-
-        .info-value {
-          font-weight: 600;
-          color: #333;
-          font-size: 13px;
-        }
-
-        .form-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 14px;
-          padding-top: 12px;
-          border-top: 1px solid #ddd;
-        }
-
-        .btn-cancel,
-        .btn-submit {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .btn-cancel {
-          background: #6c757d;
-          color: white;
-        }
-
-        .btn-cancel:hover {
-          background: #5a6268;
-        }
-
-        .btn-submit {
-          background: #28a745;
-          color: white;
-        }
-
-        .btn-submit:hover {
-          background: #218838;
-        }
-
-        @media (max-width: 768px) {
-          .form-grid-2 {
-            grid-template-columns: 1fr;
-          }
-
-          .form-group.col-span-2 {
-            grid-column: 1 / -1;
-          }
-
-          .form-actions {
-            flex-direction: column;
-          }
-
-          .btn-cancel,
-          .btn-submit {
-            width: 100%;
-          }
-        }
-      `}</style>
     </form>
   );
 };

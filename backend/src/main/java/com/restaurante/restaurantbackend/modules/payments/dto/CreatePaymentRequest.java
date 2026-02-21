@@ -13,6 +13,4 @@ public class CreatePaymentRequest {
     private Long orderId;
     private Long paymentMethodId;
     private BigDecimal amount;
-    private String referenceNumber;
-    private String notes;
 }

@@ -46,15 +46,11 @@ public class EmployeeController {
         }
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<EmployeeResponse> getEmployeeByUserId(@PathVariable Long userId) {
-        try {
-            EmployeeResponse employee = employeeService.getEmployeeByUserId(userId);
-            return ResponseEntity.ok(employee);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
+    // Endpoint deshabilitado - la relación User->Employee se maneja desde User
+    // @GetMapping("/user/{userId}")
+    // public ResponseEntity<EmployeeResponse> getEmployeeByUserId(@PathVariable Long userId) {
+    //     return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    // }
 
     @GetMapping("/position/{positionId}")
     public ResponseEntity<List<EmployeeResponse>> getEmployeesByPosition(@PathVariable Long positionId) {
