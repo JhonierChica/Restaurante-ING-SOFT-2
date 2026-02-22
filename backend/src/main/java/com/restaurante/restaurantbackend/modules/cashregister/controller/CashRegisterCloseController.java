@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cash-register-closes")
@@ -30,6 +31,17 @@ public class CashRegisterCloseController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/daily-close")
+    public ResponseEntity<?> createDailyCashClose(@RequestBody Map<String, String> request) {
+        try {
+            String closedBy = request.getOrDefault("closedBy", "Sistema");
+            CashRegisterCloseResponse response = cashRegisterCloseService.createDailyCashClose(closedBy);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 

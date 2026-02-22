@@ -25,4 +25,14 @@ export const paymentService = {
     const response = await apiClient.get('/payments/pending');
     return response.data;
   },
+
+  getPaymentsByDateRange: async (startDate, endDate) => {
+    const response = await apiClient.get(`/payments/date-range?startDate=${startDate}&endDate=${endDate}`);
+    return response.data;
+  },
+
+  getDailySummary: async (date) => {
+    const response = await apiClient.get(`/payments/daily-summary?date=${date}`);
+    return response.data;
+  },
 };

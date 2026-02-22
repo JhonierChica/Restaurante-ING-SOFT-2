@@ -94,6 +94,51 @@ public class OrderController {
         }
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        try {
+            System.out.println("=== UPDATE ORDER STATUS ===");
+            System.out.println("Order ID: " + id);
+            System.out.println("Request body: " + body);
+            
+            String status = body.get("status");
+            System.out.println("Status received: '" + status + "'");
+            
+            if (status == null || status.isBlank()) {
+                System.err.println("ERROR: Status is null or blank");
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Status is required"));
+            }
+            
+            // Convertir a mayúsculas y hacer valueOf
+            String statusUpper = status.toUpperCase().trim();
+            System.out.println("Status uppercase: '" + statusUpper + "'");
+            
+            Order.OrderStatus orderStatus;
+            try {
+                orderStatus = Order.OrderStatus.valueOf(statusUpper);
+                System.out.println("OrderStatus enum: " + orderStatus);
+            } catch (IllegalArgumentException e) {
+                System.err.println("ERROR: Invalid status value - " + statusUpper);
+                return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "error", "Invalid status value: " + status,
+                    "validValues", "PENDIENTE, EN_PREPARACION, LISTO, SERVIDO, CANCELADO"
+                ));
+            }
+            
+            OrderResponse response = orderService.updateOrderStatus(id, orderStatus);
+            System.out.println("Order status updated successfully");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            System.err.println("ERROR: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(java.util.Map.of(
+                "error", "Error updating order status: " + e.getMessage()
+            ));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         try {

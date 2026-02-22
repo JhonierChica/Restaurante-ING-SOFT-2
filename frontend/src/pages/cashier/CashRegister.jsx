@@ -2,63 +2,30 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
 import Table from '../../components/common/Table';
-import Button from '../../components/common/Button';
-import Modal from '../../components/common/Modal';
-import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
+import Modal from '../../components/common/Modal';
 import { CashRegisterIcon } from '../../components/common/Icons';
 import { cashRegisterService } from '../../services/cashRegisterService';
-import { useAuth } from '../../context/AuthContext';
 
 const CashRegister = () => {
-  const { user } = useAuth();
   const [closes, setCloses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'daily', 'monthly', 'annual'
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedClose, setSelectedClose] = useState(null);
-  const [lastClose, setLastClose] = useState(null);
-  const [formData, setFormData] = useState({
-    initialAmount: '',
-    finalAmount: '',
-    cashAmount: '',
-    cardAmount: '',
-    transferAmount: '',
-    totalSales: '',
-    totalExpenses: '',
-    difference: '',
-    notes: '',
-    closedBy: '',
-  });
 
   useEffect(() => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    // Calcular la diferencia automáticamente
-    const final = parseFloat(formData.finalAmount) || 0;
-    const initial = parseFloat(formData.initialAmount) || 0;
-    const sales = parseFloat(formData.totalSales) || 0;
-    const expenses = parseFloat(formData.totalExpenses) || 0;
-    const expectedFinal = initial + sales - expenses;
-    const difference = final - expectedFinal;
-    
-    setFormData(prev => ({
-      ...prev,
-      difference: difference.toFixed(2)
-    }));
-  }, [formData.finalAmount, formData.initialAmount, formData.totalSales, formData.totalExpenses]);
-
   const loadData = async () => {
     try {
       setLoading(true);
-      const [closesData, lastCloseData] = await Promise.all([
-        cashRegisterService.getAllCloses(),
-        cashRegisterService.getLastClose().catch(() => null),
-      ]);
+      const closesData = await cashRegisterService.getAllCloses();
       setCloses(closesData);
-      setLastClose(lastCloseData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -67,50 +34,16 @@ const CashRegister = () => {
     }
   };
 
-  const handleAdd = () => {
-    setFormData({
-      initialAmount: lastClose?.finalAmount?.toString() || '',
-      finalAmount: '',
-      cashAmount: '',
-      cardAmount: '',
-      transferAmount: '',
-      totalSales: '',
-      totalExpenses: '',
-      difference: '0',
-      notes: '',
-      closedBy: user?.username || '',
-    });
-    setShowModal(true);
-  };
-
   const handleViewDetail = (close) => {
     setSelectedClose(close);
     setShowDetailModal(true);
-  };
-
-  const handleSubmit = async () => {
-    try {
-      await cashRegisterService.createCashRegisterClose(formData);
-      alert('Cierre de caja registrado exitosamente');
-      setShowModal(false);
-      loadData();
-    } catch (error) {
-      console.error('Error al registrar cierre:', error);
-      alert('Error al registrar cierre de caja');
-    }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
   };
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
+      minimumFractionDigits: 2,
     }).format(value || 0);
   };
 
@@ -126,16 +59,145 @@ const CashRegister = () => {
   };
 
   const getDifferenceColor = (difference) => {
-    if (difference > 0) return '#10b981'; // Verde
-    if (difference < 0) return '#ef4444'; // Rojo
-    return '#6b7280'; // Gris
+    if (difference > 0) return '#10b981';
+    if (difference < 0) return '#ef4444';
+    return '#6b7280';
+  };
+
+  // Filtrar cierres según el tipo seleccionado
+  const getFilteredCloses = () => {
+    if (filterType === 'all') return closes;
+    
+    return closes.filter(close => {
+      if (!close.closingDate) return false;
+      const closeDate = new Date(close.closingDate);
+      
+      if (filterType === 'daily') {
+        return closeDate.toISOString().split('T')[0] === selectedDate;
+      }
+      if (filterType === 'monthly') {
+        return closeDate.toISOString().slice(0, 7) === selectedMonth;
+      }
+      if (filterType === 'annual') {
+        return closeDate.getFullYear().toString() === selectedYear;
+      }
+      return true;
+    });
+  };
+
+  const filteredCloses = getFilteredCloses();
+
+  // Calcular resumen de los cierres filtrados
+  const totalSales = filteredCloses.reduce((sum, c) => sum + parseFloat(c.totalSales || 0), 0);
+  const totalTransactions = filteredCloses.reduce((sum, c) => sum + (c.totalTransactions || 0), 0);
+  const totalDifference = filteredCloses.reduce((sum, c) => sum + parseFloat(c.difference || 0), 0);
+
+  // Generar PDF
+  const generatePDF = () => {
+    const filterLabel = filterType === 'daily' ? `Día: ${selectedDate}` 
+      : filterType === 'monthly' ? `Mes: ${selectedMonth}` 
+      : filterType === 'annual' ? `Año: ${selectedYear}` 
+      : 'Todos';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Cierre de Caja - Mr. Panzo</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #333; padding-bottom: 15px; }
+          .header h1 { margin: 0; font-size: 24px; }
+          .header h2 { margin: 5px 0; font-size: 16px; color: #666; }
+          .header p { margin: 5px 0; font-size: 12px; color: #999; }
+          .summary { display: flex; justify-content: space-around; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+          .summary-item { text-align: center; }
+          .summary-item h3 { margin: 0; font-size: 12px; color: #666; }
+          .summary-item p { margin: 5px 0; font-size: 18px; font-weight: bold; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th { background: #343a40; color: white; padding: 10px; text-align: left; font-size: 12px; }
+          td { padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 11px; }
+          tr:nth-child(even) { background: #f8f9fa; }
+          .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
+          .positive { color: #10b981; }
+          .negative { color: #ef4444; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🍕 Mr. Panzo - Restaurante</h1>
+          <h2>Reporte de Cierres de Caja</h2>
+          <p>Filtro: ${filterLabel} | Generado: ${new Date().toLocaleString('es-CO')}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <h3>Total Cierres</h3>
+            <p>${filteredCloses.length}</p>
+          </div>
+          <div class="summary-item">
+            <h3>Total Ventas</h3>
+            <p>${formatCurrency(totalSales)}</p>
+          </div>
+          <div class="summary-item">
+            <h3>Transacciones</h3>
+            <p>${totalTransactions}</p>
+          </div>
+          <div class="summary-item">
+            <h3>Diferencia</h3>
+            <p class="${totalDifference >= 0 ? 'positive' : 'negative'}">${formatCurrency(totalDifference)}</p>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha de Cierre</th>
+              <th>Monto Inicial</th>
+              <th>Monto Final</th>
+              <th>Total Ventas</th>
+              <th>Diferencia</th>
+              <th>Cerrado por</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredCloses.map(c => `
+              <tr>
+                <td>${c.id}</td>
+                <td>${formatDateTime(c.closingDate)}</td>
+                <td>${formatCurrency(c.initialAmount)}</td>
+                <td>${formatCurrency(c.finalAmount)}</td>
+                <td>${formatCurrency(c.totalSales)}</td>
+                <td class="${parseFloat(c.difference || 0) >= 0 ? 'positive' : 'negative'}">${formatCurrency(c.difference)}</td>
+                <td>${c.closedBy || 'N/A'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>Reporte generado automáticamente por el Sistema de Gestión Mr. Panzo</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
 
   const columns = [
     { header: 'ID', field: 'id' },
     { 
       header: 'Fecha de Cierre', 
-      render: (item) => formatDateTime(item.closeDate)
+      render: (item) => formatDateTime(item.closingDate)
     },
     { 
       header: 'Monto Inicial', 
@@ -171,161 +233,175 @@ const CashRegister = () => {
     },
   ];
 
+  // Generar opciones de años
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let y = currentYear; y >= currentYear - 5; y--) {
+    yearOptions.push(y);
+  }
+
   if (loading) return <Loading message="Cargando cierres de caja..." />;
 
   return (
     <Layout>
       <div className="page-container">
-        {lastClose && (
-          <Card title="Último Cierre de Caja" style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-              <div>
-                <strong>Fecha:</strong>
-                <div>{formatDateTime(lastClose.closeDate)}</div>
-              </div>
-              <div>
-                <strong>Monto Final:</strong>
-                <div>{formatCurrency(lastClose.finalAmount)}</div>
-              </div>
-              <div>
-                <strong>Ventas:</strong>
-                <div>{formatCurrency(lastClose.totalSales)}</div>
-              </div>
-              <div>
-                <strong>Diferencia:</strong>
-                <div style={{ color: getDifferenceColor(lastClose.difference), fontWeight: 'bold' }}>
-                  {formatCurrency(lastClose.difference)}
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
+        {/* Resumen */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+          gap: '15px', 
+          marginBottom: '20px' 
+        }}>
+          <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Total Cierres</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1565c0' }}>{filteredCloses.length}</div>
+          </div>
+          <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Total Ventas</div>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2e7d32' }}>{formatCurrency(totalSales)}</div>
+          </div>
+          <div style={{ padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Transacciones</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e65100' }}>{totalTransactions}</div>
+          </div>
+          <div style={{ padding: '15px', backgroundColor: totalDifference >= 0 ? '#e8f5e9' : '#ffebee', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Diferencia</div>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: getDifferenceColor(totalDifference) }}>{formatCurrency(totalDifference)}</div>
+          </div>
+        </div>
 
         <Card
           title={<><CashRegisterIcon size={24} /> Cierres de Caja</>}
           actions={
-            <Button onClick={handleAdd}>
-              + Nuevo Cierre de Caja
-            </Button>
+            <button
+              onClick={generatePDF}
+              disabled={filteredCloses.length === 0}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: filteredCloses.length === 0 ? '#ccc' : '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: filteredCloses.length === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              📄 Exportar PDF
+            </button>
           }
         >
+          {/* Filtros */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            marginBottom: '20px', 
+            padding: '15px', 
+            backgroundColor: '#f8f9fa', 
+            borderRadius: '8px',
+            flexWrap: 'wrap',
+            alignItems: 'flex-end'
+          }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>
+                Tipo de Reporte
+              </label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '2px solid #007bff',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  minWidth: '150px'
+                }}
+              >
+                <option value="all">📋 Todos</option>
+                <option value="daily">📅 Diario</option>
+                <option value="monthly">📆 Mensual</option>
+                <option value="annual">📊 Anual</option>
+              </select>
+            </div>
+
+            {filterType === 'daily' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>
+                  Fecha
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+            )}
+
+            {filterType === 'monthly' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>
+                  Mes
+                </label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+            )}
+
+            {filterType === 'annual' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>
+                  Año
+                </label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    minWidth: '120px'
+                  }}
+                >
+                  {yearOptions.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div style={{ fontSize: '13px', color: '#666', alignSelf: 'center', marginLeft: 'auto' }}>
+              Mostrando <strong>{filteredCloses.length}</strong> cierre(s)
+            </div>
+          </div>
+
           <Table
             columns={columns}
-            data={closes}
+            data={filteredCloses}
             actions={actions}
           />
         </Card>
 
-        <Modal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          title="Nuevo Cierre de Caja"
-          onConfirm={handleSubmit}
-          size="large"
-        >
-          <div className="form-grid-2">
-            <Input
-              label="Monto Inicial"
-              name="initialAmount"
-              type="number"
-              value={formData.initialAmount}
-              onChange={handleChange}
-              required
-              placeholder="0"
-            />
-
-            <Input
-              label="Monto Final en Caja"
-              name="finalAmount"
-              type="number"
-              value={formData.finalAmount}
-              onChange={handleChange}
-              required
-              placeholder="0"
-            />
-
-            <Input
-              label="Efectivo"
-              name="cashAmount"
-              type="number"
-              value={formData.cashAmount}
-              onChange={handleChange}
-              placeholder="0"
-            />
-
-            <Input
-              label="Tarjetas"
-              name="cardAmount"
-              type="number"
-              value={formData.cardAmount}
-              onChange={handleChange}
-              placeholder="0"
-            />
-
-            <Input
-              label="Transferencias"
-              name="transferAmount"
-              type="number"
-              value={formData.transferAmount}
-              onChange={handleChange}
-              placeholder="0"
-            />
-
-            <Input
-              label="Total Ventas"
-              name="totalSales"
-              type="number"
-              value={formData.totalSales}
-              onChange={handleChange}
-              required
-              placeholder="0"
-            />
-
-            <Input
-              label="Total Gastos"
-              name="totalExpenses"
-              type="number"
-              value={formData.totalExpenses}
-              onChange={handleChange}
-              placeholder="0"
-            />
-
-            <Input
-              label="Diferencia"
-              name="difference"
-              type="number"
-              value={formData.difference}
-              readOnly
-              style={{ 
-                backgroundColor: '#f3f4f6',
-                color: getDifferenceColor(parseFloat(formData.difference)),
-                fontWeight: 'bold'
-              }}
-            />
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Notas</label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                className="form-input"
-                rows="3"
-                placeholder="Observaciones o notas adicionales..."
-              />
-            </div>
-
-            <Input
-              label="Cerrado por"
-              name="closedBy"
-              value={formData.closedBy}
-              onChange={handleChange}
-              required
-              placeholder="Usuario que realiza el cierre"
-            />
-          </div>
-        </Modal>
-
+        {/* Modal de detalle */}
         <Modal
           isOpen={showDetailModal}
           onClose={() => setShowDetailModal(false)}
@@ -338,7 +414,7 @@ const CashRegister = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div>
                   <strong>Fecha de Cierre:</strong>
-                  <div>{formatDateTime(selectedClose.closeDate)}</div>
+                  <div>{formatDateTime(selectedClose.closingDate)}</div>
                 </div>
                 <div>
                   <strong>Cerrado por:</strong>
@@ -353,24 +429,12 @@ const CashRegister = () => {
                   <div>{formatCurrency(selectedClose.finalAmount)}</div>
                 </div>
                 <div>
-                  <strong>Efectivo:</strong>
-                  <div>{formatCurrency(selectedClose.cashAmount)}</div>
-                </div>
-                <div>
-                  <strong>Tarjetas:</strong>
-                  <div>{formatCurrency(selectedClose.cardAmount)}</div>
-                </div>
-                <div>
-                  <strong>Transferencias:</strong>
-                  <div>{formatCurrency(selectedClose.transferAmount)}</div>
-                </div>
-                <div>
                   <strong>Total Ventas:</strong>
                   <div>{formatCurrency(selectedClose.totalSales)}</div>
                 </div>
                 <div>
-                  <strong>Total Gastos:</strong>
-                  <div>{formatCurrency(selectedClose.totalExpenses)}</div>
+                  <strong>Transacciones:</strong>
+                  <div>{selectedClose.totalTransactions || 0}</div>
                 </div>
                 <div>
                   <strong>Diferencia:</strong>

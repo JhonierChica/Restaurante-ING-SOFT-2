@@ -5,11 +5,15 @@ import com.restaurante.restaurantbackend.modules.payments.dto.PaymentResponse;
 import com.restaurante.restaurantbackend.modules.payments.dto.UpdatePaymentRequest;
 import com.restaurante.restaurantbackend.modules.payments.model.Payment;
 import com.restaurante.restaurantbackend.modules.payments.service.PaymentService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -61,6 +65,23 @@ public class PaymentController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/date-range")
+    public ResponseEntity<List<PaymentResponse>> getPaymentsByDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(paymentService.getPaymentsByDateRange(startDate, endDate));
+    }
+
+    @GetMapping("/daily-summary")
+    public ResponseEntity<Map<String, Object>> getDailySummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("date", date);
+        summary.put("totalSales", paymentService.getTotalSalesByDate(date));
+        summary.put("totalTransactions", paymentService.countPaymentsByDate(date));
+        return ResponseEntity.ok(summary);
     }
 
     @PutMapping("/{id}")

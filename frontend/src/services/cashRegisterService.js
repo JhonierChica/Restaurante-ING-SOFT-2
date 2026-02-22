@@ -21,6 +21,11 @@ export const cashRegisterService = {
     return response.data;
   },
 
+  createDailyCashClose: async (closedBy) => {
+    const response = await apiClient.post('/cash-register-closes/daily-close', { closedBy });
+    return response.data;
+  },
+
   getClosesByDateRange: async (startDate, endDate) => {
     const response = await apiClient.get(
       `/cash-register-closes/date-range?startDate=${startDate}&endDate=${endDate}`

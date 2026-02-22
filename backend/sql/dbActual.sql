@@ -19,6 +19,68 @@ CREATE TABLE IF NOT EXISTS public.cargo
     CONSTRAINT cargo_codigo_key UNIQUE (codigo)
 );
 
+CREATE TABLE IF NOT EXISTS public.cash_register_closes
+(
+    id serial NOT NULL,
+    opening_date timestamp without time zone NOT NULL,
+    closing_date timestamp without time zone NOT NULL,
+    initial_amount numeric(10, 2) NOT NULL DEFAULT 0.00,
+    final_amount numeric(10, 2) NOT NULL DEFAULT 0.00,
+    expected_amount numeric(10, 2) DEFAULT 0.00,
+    difference numeric(10, 2) DEFAULT 0.00,
+    total_sales numeric(10, 2) DEFAULT 0.00,
+    total_transactions integer DEFAULT 0,
+    cash_amount numeric(10, 2) DEFAULT 0.00,
+    card_amount numeric(10, 2) DEFAULT 0.00,
+    other_amount numeric(10, 2) DEFAULT 0.00,
+    closed_by character varying(100) COLLATE pg_catalog."default",
+    notes character varying(1000) COLLATE pg_catalog."default",
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT cash_register_closes_pkey PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE public.cash_register_closes
+    IS 'Tabla para registrar los cierres de caja diarios';
+
+COMMENT ON COLUMN public.cash_register_closes.opening_date
+    IS 'Fecha y hora de apertura de caja';
+
+COMMENT ON COLUMN public.cash_register_closes.closing_date
+    IS 'Fecha y hora de cierre de caja';
+
+COMMENT ON COLUMN public.cash_register_closes.initial_amount
+    IS 'Monto inicial en caja al abrir';
+
+COMMENT ON COLUMN public.cash_register_closes.final_amount
+    IS 'Monto final en caja al cerrar';
+
+COMMENT ON COLUMN public.cash_register_closes.expected_amount
+    IS 'Monto esperado según ventas y gastos';
+
+COMMENT ON COLUMN public.cash_register_closes.difference
+    IS 'Diferencia entre monto final y esperado';
+
+COMMENT ON COLUMN public.cash_register_closes.total_sales
+    IS 'Total de ventas del periodo';
+
+COMMENT ON COLUMN public.cash_register_closes.total_transactions
+    IS 'Número total de transacciones';
+
+COMMENT ON COLUMN public.cash_register_closes.cash_amount
+    IS 'Monto en efectivo';
+
+COMMENT ON COLUMN public.cash_register_closes.card_amount
+    IS 'Monto en tarjeta';
+
+COMMENT ON COLUMN public.cash_register_closes.other_amount
+    IS 'Monto en otros métodos de pago';
+
+COMMENT ON COLUMN public.cash_register_closes.closed_by
+    IS 'Usuario que realizó el cierre';
+
+COMMENT ON COLUMN public.cash_register_closes.notes
+    IS 'Notas o comentarios adicionales';
+
 CREATE TABLE IF NOT EXISTS public.categoria
 (
     id_categoria serial NOT NULL,
@@ -137,11 +199,15 @@ CREATE TABLE IF NOT EXISTS public.pedido
     id_mesa integer NOT NULL,
     estado character varying(1) COLLATE pg_catalog."default" NOT NULL,
     tipo_pedido character varying(20) COLLATE pg_catalog."default" DEFAULT 'ESTABLECIMIENTO'::character varying,
+    notas text COLLATE pg_catalog."default",
     CONSTRAINT "Pedido_pkey" PRIMARY KEY (id_pedido)
 );
 
 COMMENT ON COLUMN public.pedido.tipo_pedido
     IS 'Tipo de pedido: ESTABLECIMIENTO o DOMICILIO';
+
+COMMENT ON COLUMN public.pedido.notas
+    IS 'Notas adicionales del pedido ingresadas por el mesero';
 
 CREATE TABLE IF NOT EXISTS public.permissions
 (

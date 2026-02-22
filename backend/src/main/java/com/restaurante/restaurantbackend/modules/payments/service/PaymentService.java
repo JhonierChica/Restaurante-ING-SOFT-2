@@ -50,7 +50,7 @@ public class PaymentService {
         payment.setOrder(order);
         payment.setPaymentMethod(paymentMethod);
         payment.setAmountFromBigDecimal(request.getAmount());
-        payment.setPaymentStatus(Payment.PaymentStatus.PENDIENTE);
+        payment.setPaymentStatus(Payment.PaymentStatus.COMPLETADO);
 
         Payment savedPayment = paymentRepository.save(payment);
         return mapToResponse(savedPayment);
@@ -129,6 +129,31 @@ public class PaymentService {
         response.setPaymentMethodName(payment.getPaymentMethod().getName());
         response.setAmount(payment.getAmountAsBigDecimal());
         response.setStatus(payment.getPaymentStatus());
+        response.setPaymentDate(payment.getPaymentDate());
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getPaymentsByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return paymentRepository.findByPaymentDateBetween(startDate, endDate).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public java.math.BigDecimal getTotalSalesByDate(java.time.LocalDate date) {
+        List<Payment> payments = paymentRepository.findByPaymentDate(date);
+        return payments.stream()
+                .filter(p -> "C".equals(p.getStatus())) // Solo pagos completados
+                .map(Payment::getAmountAsBigDecimal)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    }
+
+    @Transactional(readOnly = true)
+    public int countPaymentsByDate(java.time.LocalDate date) {
+        return paymentRepository.findByPaymentDate(date).stream()
+                .filter(p -> "C".equals(p.getStatus()))
+                .mapToInt(p -> 1)
+                .sum();
     }
 }

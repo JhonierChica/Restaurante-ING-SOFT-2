@@ -30,16 +30,22 @@ const Table = ({ columns, data, onEdit, onDelete, actions = true }) => {
                   <td className="actions-cell">
                     {hasCustomActions ? (
                       // Renderizar acciones personalizadas
-                      actions.map((action, actionIndex) => (
-                        <button
-                          key={actionIndex}
-                          className={`btn-action btn-${action.variant || 'primary'}`}
-                          onClick={() => action.onClick(row)}
-                          title={typeof action.label === 'function' ? action.label(row) : action.label}
-                        >
-                          {typeof action.label === 'function' ? action.label(row) : action.label}
-                        </button>
-                      ))
+                      actions.map((action, actionIndex) => {
+                        // Soporte para propiedad show condicional
+                        if (action.show && typeof action.show === 'function' && !action.show(row)) {
+                          return null;
+                        }
+                        return (
+                          <button
+                            key={actionIndex}
+                            className={`btn-action btn-${action.variant || 'primary'}`}
+                            onClick={() => action.onClick(row)}
+                            title={typeof action.label === 'function' ? action.label(row) : action.label}
+                          >
+                            {typeof action.label === 'function' ? action.label(row) : action.label}
+                          </button>
+                        );
+                      })
                     ) : (
                       // Renderizar acciones por defecto (onEdit, onDelete)
                       <>

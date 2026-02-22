@@ -4,18 +4,36 @@ import Card from '../../components/common/Card';
 import Table from '../../components/common/Table';
 import Modal from '../../components/common/Modal';
 import Loading from '../../components/common/Loading';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { DeliveryIcon } from '../../components/common/Icons';
 import { deliveryService } from '../../services/deliveryService';
 import { orderService } from '../../services/orderService';
+import { paymentService } from '../../services/paymentService';
+import { paymentMethodService } from '../../services/paymentMethodService';
 
 const Deliveries = () => {
   const [deliveries, setDeliveries] = useState([]);
   const [orders, setOrders] = useState({});
   const [loading, setLoading] = useState(true);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  
+  // Filtro por estado de domicilio
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('TODOS');
+  
+  // Modal para estado del domicilio
+  const [showDeliveryStatusModal, setShowDeliveryStatusModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [statusData, setStatusData] = useState({
-    status: 'PENDING',
+  const [newDeliveryStatus, setNewDeliveryStatus] = useState('');
+
+  // Estado para cobro
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState(null);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentData, setPaymentData] = useState({
+    paymentMethodId: '',
+    amount: 0,
+    receivedAmount: '',
+    change: 0,
   });
 
   useEffect(() => {
@@ -25,11 +43,25 @@ const Deliveries = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const deliveriesData = await deliveryService.getAllDeliveries();
+      const [deliveriesData, paymentMethodsData, paymentsData] = await Promise.all([
+        deliveryService.getAllDeliveries(),
+        paymentMethodService.getActivePaymentMethods(),
+        paymentService.getAllPayments(),
+      ]);
       
-      // Obtener información de los pedidos relacionados
+      // Identificar pedidos ya pagados (con pago COMPLETADO)
+      const paidOrderIds = new Set(
+        paymentsData
+          .filter(p => p.status === 'COMPLETADO')
+          .map(p => p.orderId)
+      );
+      
+      // Filtrar domicilios que ya fueron pagados
+      const unpaidDeliveries = deliveriesData.filter(d => !paidOrderIds.has(d.orderId));
+      
+      // Obtener información de los pedidos relacionados (solo los no pagados)
       const ordersMap = {};
-      for (const delivery of deliveriesData) {
+      for (const delivery of unpaidDeliveries) {
         try {
           const order = await orderService.getOrderById(delivery.orderId);
           ordersMap[delivery.orderId] = order;
@@ -38,8 +70,9 @@ const Deliveries = () => {
         }
       }
       
-      setDeliveries(deliveriesData);
+      setDeliveries(unpaidDeliveries);
       setOrders(ordersMap);
+      setPaymentMethods(paymentMethodsData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -48,32 +81,107 @@ const Deliveries = () => {
     }
   };
 
-
-  const handleChangeStatus = (delivery) => {
+  // === FUNCIONES PARA ESTADO DEL DOMICILIO ===
+  const handleChangeDeliveryStatus = (delivery) => {
     setSelectedDelivery(delivery);
-    setStatusData({
-      status: delivery.status,
-    });
-    setShowStatusModal(true);
+    setNewDeliveryStatus(delivery.status || 'PENDING');
+    setShowDeliveryStatusModal(true);
   };
 
-  const handleStatusChange = (e) => {
-    setStatusData({ status: e.target.value });
-  };
-
-  const handleStatusSubmit = async () => {
+  const handleDeliveryStatusSubmit = async () => {
     try {
-      await deliveryService.updateDeliveryStatus(
-        selectedDelivery.id,
-        statusData.status
-      );
-      alert('Estado actualizado exitosamente');
-      setShowStatusModal(false);
+      await deliveryService.updateDeliveryStatus(selectedDelivery.id, newDeliveryStatus);
+      alert('Estado del domicilio actualizado exitosamente');
+      setShowDeliveryStatusModal(false);
+      setSelectedDelivery(null);
       loadData();
     } catch (error) {
-      console.error('Error al actualizar estado:', error);
-      alert('Error al actualizar estado');
+      console.error('Error al actualizar estado del domicilio:', error);
+      alert('Error al actualizar estado del domicilio');
     }
+  };
+
+  // === FUNCIONES DE COBRO ===
+  const handleInitiatePayment = (delivery) => {
+    const order = orders[delivery.orderId];
+    if (!order) {
+      alert('No se pudo encontrar el pedido asociado');
+      return;
+    }
+    setPaymentOrder(order);
+    setShowPaymentConfirm(true);
+  };
+
+  const handleConfirmPaymentStart = () => {
+    if (!paymentOrder) {
+      alert('Error: No se encontró el pedido para cobrar');
+      setShowPaymentConfirm(false);
+      return;
+    }
+    setShowPaymentConfirm(false);
+    setPaymentData({
+      paymentMethodId: '',
+      amount: parseFloat(paymentOrder.total || 0),
+      receivedAmount: '',
+      change: 0,
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleReceivedAmountChange = (value) => {
+    const received = parseFloat(value) || 0;
+    const total = parseFloat(paymentOrder?.total || 0);
+    const change = received - total;
+    setPaymentData(prev => ({
+      ...prev,
+      receivedAmount: value,
+      change: change >= 0 ? change : 0,
+    }));
+  };
+
+  const handlePaymentSubmit = async () => {
+    try {
+      if (!paymentOrder || !paymentOrder.id) {
+        alert('Error: No se encontró el pedido para cobrar');
+        return;
+      }
+      if (!paymentData.paymentMethodId) {
+        alert('Por favor seleccione un método de pago');
+        return;
+      }
+      const received = parseFloat(paymentData.receivedAmount) || 0;
+      const total = parseFloat(paymentData.amount);
+      if (received < total) {
+        alert(`El monto recibido ($${received.toFixed(2)}) es menor al total del pedido ($${total.toFixed(2)})`);
+        return;
+      }
+
+      const payment = {
+        orderId: parseInt(paymentOrder.id),
+        paymentMethodId: parseInt(paymentData.paymentMethodId),
+        amount: total,
+      };
+
+      await paymentService.createPayment(payment);
+      alert(`✅ Pago registrado exitosamente\n\nTotal: $${total.toFixed(2)}\nRecibido: $${received.toFixed(2)}\nCambio: $${paymentData.change.toFixed(2)}`);
+      setShowPaymentModal(false);
+      setPaymentOrder(null);
+      loadData();
+    } catch (error) {
+      console.error('Error al registrar pago:', error);
+      alert('Error al registrar pago: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const getOrderStatusBadge = (status) => {
+    const badges = {
+      PENDIENTE: { emoji: '🟡', text: 'Pendiente', class: 'badge-warning' },
+      EN_PREPARACION: { emoji: '🔵', text: 'En Proceso', class: 'badge-info' },
+      LISTO: { emoji: '🟢', text: 'Listo', class: 'badge-success' },
+      SERVIDO: { emoji: '✅', text: 'Servido', class: 'badge-primary' },
+      CANCELADO: { emoji: '🔴', text: 'Cancelado', class: 'badge-danger' },
+    };
+    return badges[status] || { emoji: '', text: status, class: 'badge-secondary' };
   };
 
   const getStatusBadge = (status) => {
@@ -97,6 +205,14 @@ const Deliveries = () => {
       minute: '2-digit',
     });
   };
+
+  // Aplicar filtro por estado de domicilio
+  const getFilteredDeliveries = () => {
+    if (deliveryStatusFilter === 'TODOS') return deliveries;
+    return deliveries.filter(delivery => delivery.status === deliveryStatusFilter);
+  };
+
+  const filteredDeliveries = getFilteredDeliveries();
 
   const columns = [
     { header: 'ID', field: 'id' },
@@ -130,7 +246,7 @@ const Deliveries = () => {
       }
     },
     { 
-      header: 'Estado', 
+      header: 'Estado Domicilio', 
       render: (item) => getStatusBadge(item.status)
     },
     { 
@@ -141,9 +257,15 @@ const Deliveries = () => {
 
   const actions = [
     {
-      label: 'Cambiar Estado',
-      onClick: handleChangeStatus,
-      variant: 'info',
+      label: 'Estado Domicilio',
+      onClick: handleChangeDeliveryStatus,
+      variant: 'primary',
+    },
+    {
+      label: '💰 Cobrar',
+      onClick: handleInitiatePayment,
+      variant: 'success',
+      show: (delivery) => delivery.status === 'DELIVERED',
     },
   ];
 
@@ -157,40 +279,247 @@ const Deliveries = () => {
             <>
               <DeliveryIcon size={24} /> Gestión de Domicilios
               <span style={{ marginLeft: '10px', fontSize: '0.9em', color: '#666' }}>
-                ({deliveries.length} {deliveries.length === 1 ? 'domicilio' : 'domicilios'})
+                ({filteredDeliveries.length} de {deliveries.length} {deliveries.length === 1 ? 'domicilio' : 'domicilios'})
               </span>
             </>
           }
         >
+          {/* Filtro por estado del domicilio */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '16px',
+            padding: '12px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', marginRight: '8px' }}>
+              🏍️ Estado del Domicilio:
+            </span>
+            {[
+              { value: 'TODOS', label: '📋 Todos', color: '#6c757d' },
+              { value: 'PENDING', label: '⏳ Pendiente', color: '#f0ad4e' },
+              { value: 'IN_TRANSIT', label: '🚀 En Tránsito', color: '#0275d8' },
+              { value: 'DELIVERED', label: '✅ Entregado', color: '#5cb85c' },
+              { value: 'CANCELLED', label: '❌ Cancelado', color: '#d9534f' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setDeliveryStatusFilter(opt.value)}
+                style={{
+                  padding: '6px 14px',
+                  border: deliveryStatusFilter === opt.value ? `2px solid ${opt.color}` : '1px solid #dee2e6',
+                  borderRadius: '20px',
+                  backgroundColor: deliveryStatusFilter === opt.value ? `${opt.color}20` : 'white',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: deliveryStatusFilter === opt.value ? 'bold' : 'normal',
+                  transition: 'all 0.2s ease',
+                  color: deliveryStatusFilter === opt.value ? opt.color : '#555',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <span style={{ marginLeft: 'auto', fontSize: '13px', color: '#666' }}>
+              Mostrando <strong>{filteredDeliveries.length}</strong> de {deliveries.length}
+            </span>
+          </div>
+
           <Table
             columns={columns}
-            data={deliveries}
+            data={filteredDeliveries}
             actions={actions}
           />
         </Card>
 
+        {/* Modal para cambiar estado del domicilio */}
         <Modal
-          isOpen={showStatusModal}
-          onClose={() => setShowStatusModal(false)}
-          title="Cambiar Estado del Domicilio"
-          onConfirm={handleStatusSubmit}
+          isOpen={showDeliveryStatusModal}
+          onClose={() => { setShowDeliveryStatusModal(false); setSelectedDelivery(null); }}
+          title={`Cambiar Estado del Domicilio — #${selectedDelivery?.id || ''}`}
+          onConfirm={handleDeliveryStatusSubmit}
           size="small"
         >
-          <div className="form-group">
-            <label>Estado</label>
-            <select
-              name="status"
-              value={statusData.status}
-              onChange={handleStatusChange}
-              className="form-input"
-              required
-            >
-              <option value="PENDING">Pendiente</option>
-              <option value="IN_TRANSIT">En Tránsito</option>
-              <option value="DELIVERED">Entregado</option>
-              <option value="CANCELLED">Cancelado</option>
-            </select>
-          </div>
+          {selectedDelivery && (
+            <div style={{ marginBottom: '15px' }}>
+              <p style={{ margin: '0 0 10px 0', color: '#666' }}>
+                Pedido #{selectedDelivery.orderId} — Estado actual: <strong>{getStatusBadge(selectedDelivery.status)}</strong>
+              </p>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
+                Seleccionar nuevo estado:
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { value: 'PENDING', label: '⏳ Pendiente', color: '#f0ad4e' },
+                  { value: 'IN_TRANSIT', label: '🚀 En Tránsito', color: '#0275d8' },
+                  { value: 'DELIVERED', label: '✅ Entregado', color: '#5cb85c' },
+                  { value: 'CANCELLED', label: '❌ Cancelado', color: '#d9534f' },
+                ].map((status) => (
+                  <button
+                    key={status.value}
+                    type="button"
+                    onClick={() => setNewDeliveryStatus(status.value)}
+                    style={{
+                      padding: '10px 15px',
+                      border: newDeliveryStatus === status.value ? `3px solid ${status.color}` : '1px solid #ddd',
+                      borderRadius: '8px',
+                      backgroundColor: newDeliveryStatus === status.value ? `${status.color}20` : 'white',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '14px',
+                      fontWeight: newDeliveryStatus === status.value ? 'bold' : 'normal',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {status.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Confirmación de cobro */}
+        <ConfirmDialog
+          isOpen={showPaymentConfirm}
+          onClose={() => { setShowPaymentConfirm(false); }}
+          onConfirm={handleConfirmPaymentStart}
+          title="Confirmar Cobro"
+          message={`¿Está seguro de realizar el cobro del Pedido #${paymentOrder?.id || ''} por un total de $${parseFloat(paymentOrder?.total || 0).toFixed(2)}?`}
+        />
+
+        {/* Modal de Registrar Pago */}
+        <Modal
+          isOpen={showPaymentModal}
+          onClose={() => { setShowPaymentModal(false); setPaymentOrder(null); }}
+          title={`💰 Registrar Pago — Pedido #${paymentOrder?.id || ''}`}
+          onConfirm={handlePaymentSubmit}
+          size="medium"
+        >
+          {paymentOrder && (
+            <div>
+              {/* Resumen del pedido */}
+              <div style={{ 
+                marginBottom: '20px', 
+                padding: '15px', 
+                backgroundColor: '#e8f5e9', 
+                borderRadius: '8px',
+                border: '1px solid #c8e6c9'
+              }}>
+                <div style={{ fontSize: '14px', marginBottom: '6px' }}>
+                  <strong>📋 Pedido:</strong> #{paymentOrder.id}
+                </div>
+                <div style={{ fontSize: '14px', marginBottom: '6px' }}>
+                  <strong>👤 Cliente:</strong> {paymentOrder.clientName || 'N/A'}
+                </div>
+                <div style={{ fontSize: '14px', marginBottom: '6px' }}>
+                  <strong>🏍️ Tipo:</strong> Domicilio
+                </div>
+                {/* Detalle de ítems */}
+                {paymentOrder.items && paymentOrder.items.length > 0 && (
+                  <div style={{ marginTop: '10px', borderTop: '1px solid #c8e6c9', paddingTop: '10px' }}>
+                    <strong style={{ fontSize: '13px' }}>🛒 Detalle:</strong>
+                    <div style={{ maxHeight: '120px', overflowY: 'auto', marginTop: '6px' }}>
+                      {paymentOrder.items.map((item, idx) => {
+                        const name = item.menuItemName || item.name || 'Ítem';
+                        const price = parseFloat(item.menuItemPrice || item.unitPrice || item.price || 0);
+                        const qty = item.quantity || 1;
+                        return (
+                          <div key={idx} style={{
+                            display: 'flex', justifyContent: 'space-between',
+                            padding: '4px 8px', backgroundColor: 'white', borderRadius: '4px',
+                            marginBottom: '3px', fontSize: '12px', border: '1px solid #e9ecef'
+                          }}>
+                            <span>{name} x{qty}</span>
+                            <span style={{ fontWeight: 'bold', color: '#2e7d32' }}>${(price * qty).toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Total a pagar */}
+              <div style={{
+                textAlign: 'center', padding: '12px', marginBottom: '20px',
+                backgroundColor: '#1b5e20', borderRadius: '8px', color: 'white'
+              }}>
+                <div style={{ fontSize: '13px', marginBottom: '4px' }}>TOTAL A PAGAR</div>
+                <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
+                  ${parseFloat(paymentOrder.total || 0).toFixed(2)}
+                </div>
+              </div>
+
+              {/* Método de Pago */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '14px' }}>
+                  Método de Pago <span style={{ color: 'red' }}>*</span>
+                </label>
+                <select
+                  value={paymentData.paymentMethodId}
+                  onChange={(e) => setPaymentData({ ...paymentData, paymentMethodId: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px',
+                    border: '2px solid #28a745', borderRadius: '6px',
+                    fontSize: '14px', cursor: 'pointer'
+                  }}
+                >
+                  <option value="">Seleccione un método de pago</option>
+                  {paymentMethods.map(method => (
+                    <option key={method.id} value={method.id}>
+                      {method.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Monto Recibido */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '14px' }}>
+                  Monto Recibido <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  value={paymentData.receivedAmount}
+                  onChange={(e) => handleReceivedAmountChange(e.target.value)}
+                  placeholder="Ingrese el monto recibido"
+                  min="0"
+                  step="0.01"
+                  style={{
+                    width: '100%', padding: '12px',
+                    border: `2px solid ${parseFloat(paymentData.receivedAmount || 0) >= parseFloat(paymentOrder.total || 0) ? '#28a745' : '#dc3545'}`,
+                    borderRadius: '6px', fontSize: '18px', fontWeight: 'bold',
+                    boxSizing: 'border-box', color: '#333'
+                  }}
+                />
+                {paymentData.receivedAmount !== '' && parseFloat(paymentData.receivedAmount || 0) < parseFloat(paymentOrder.total || 0) && (
+                  <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                    ⚠️ El monto recibido es menor al total del pedido
+                  </div>
+                )}
+              </div>
+
+              {/* Cambio / Devuelta */}
+              <div style={{
+                padding: '15px', borderRadius: '8px',
+                backgroundColor: paymentData.change > 0 ? '#fff3cd' : '#f8f9fa',
+                border: `2px solid ${paymentData.change > 0 ? '#ffc107' : '#dee2e6'}`,
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>CAMBIO / DEVUELTA</div>
+                <div style={{
+                  fontSize: '26px', fontWeight: 'bold',
+                  color: paymentData.change > 0 ? '#856404' : '#6c757d'
+                }}>
+                  ${paymentData.change.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          )}
         </Modal>
       </div>
     </Layout>

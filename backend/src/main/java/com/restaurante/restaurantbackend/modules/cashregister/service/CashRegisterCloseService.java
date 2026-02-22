@@ -4,11 +4,15 @@ import com.restaurante.restaurantbackend.modules.cashregister.dto.CashRegisterCl
 import com.restaurante.restaurantbackend.modules.cashregister.dto.CreateCashRegisterCloseRequest;
 import com.restaurante.restaurantbackend.modules.cashregister.model.CashRegisterClose;
 import com.restaurante.restaurantbackend.modules.cashregister.repository.CashRegisterCloseRepository;
+import com.restaurante.restaurantbackend.modules.payments.model.Payment;
+import com.restaurante.restaurantbackend.modules.payments.repository.PaymentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,9 +20,72 @@ import java.util.stream.Collectors;
 public class CashRegisterCloseService {
 
     private final CashRegisterCloseRepository cashRegisterCloseRepository;
+    private final PaymentRepository paymentRepository;
 
-    public CashRegisterCloseService(CashRegisterCloseRepository cashRegisterCloseRepository) {
+    public CashRegisterCloseService(CashRegisterCloseRepository cashRegisterCloseRepository,
+                                     PaymentRepository paymentRepository) {
         this.cashRegisterCloseRepository = cashRegisterCloseRepository;
+        this.paymentRepository = paymentRepository;
+    }
+
+    @Transactional
+    public CashRegisterCloseResponse createDailyCashClose(String closedBy) {
+        LocalDate today = LocalDate.now();
+        
+        // Verificar si ya existe un cierre para hoy
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        List<CashRegisterClose> existingCloses = cashRegisterCloseRepository
+                .findByClosingDateBetweenOrderByClosingDateDesc(startOfDay, endOfDay);
+        if (!existingCloses.isEmpty()) {
+            throw new RuntimeException("Ya existe un cierre de caja para el día de hoy");
+        }
+
+        // Obtener pagos del día
+        List<Payment> todayPayments = paymentRepository.findByPaymentDate(today);
+        List<Payment> completedPayments = todayPayments.stream()
+                .filter(p -> "C".equals(p.getStatus()))
+                .collect(Collectors.toList());
+
+        BigDecimal totalSales = completedPayments.stream()
+                .map(Payment::getAmountAsBigDecimal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        int totalTransactions = completedPayments.size();
+
+        // Obtener monto inicial del último cierre
+        BigDecimal initialAmount = BigDecimal.ZERO;
+        try {
+            CashRegisterClose lastClose = cashRegisterCloseRepository
+                    .findTopByOrderByClosingDateDesc().orElse(null);
+            if (lastClose != null) {
+                initialAmount = lastClose.getFinalAmount();
+            }
+        } catch (Exception e) {
+            // Si no hay cierres previos, el monto inicial es 0
+        }
+
+        BigDecimal finalAmount = initialAmount.add(totalSales);
+        BigDecimal expectedAmount = finalAmount;
+        BigDecimal difference = BigDecimal.ZERO; // Sin diferencia en cierre automático
+
+        CashRegisterClose close = new CashRegisterClose();
+        close.setOpeningDate(startOfDay);
+        close.setClosingDate(LocalDateTime.now());
+        close.setInitialAmount(initialAmount);
+        close.setFinalAmount(finalAmount);
+        close.setExpectedAmount(expectedAmount);
+        close.setDifference(difference);
+        close.setTotalSales(totalSales);
+        close.setTotalTransactions(totalTransactions);
+        close.setCashAmount(totalSales); // Por defecto todo como efectivo
+        close.setCardAmount(BigDecimal.ZERO);
+        close.setOtherAmount(BigDecimal.ZERO);
+        close.setClosedBy(closedBy);
+        close.setNotes("Cierre de caja del día " + today);
+
+        CashRegisterClose savedClose = cashRegisterCloseRepository.save(close);
+        return mapToResponse(savedClose);
     }
 
     @Transactional

@@ -47,10 +47,10 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
-    // Campos adicionales no mapeados a BD
-    @Transient
+    @Column(name = "notas")
     private String notes;
     
+    // Campos adicionales no mapeados a BD
     @Transient
     private LocalDateTime createdAt;
 

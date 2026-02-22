@@ -246,6 +246,18 @@ public class OrderService {
         return mapToResponse(order);
     }
 
+    public OrderResponse updateOrderStatus(Long id, Order.OrderStatus status) {
+        System.out.println("[OrderService] Updating order status for ID: " + id + " to: " + status);
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+        System.out.println("[OrderService] Order found. Current status: " + order.getOrderStatus());
+        order.setOrderStatus(status);
+        System.out.println("[OrderService] Status set, saving order...");
+        Order savedOrder = orderRepository.save(order);
+        System.out.println("[OrderService] Order saved successfully");
+        return mapToResponse(savedOrder);
+    }
+
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
