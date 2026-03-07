@@ -144,7 +144,7 @@ public class PositionService {
         return mapToResponse(updatedPosition);
     }
 
-    public void deletePosition(Long id) {
+    public void deactivatePosition(Long id) {
         Position position = positionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cargo no encontrado con id: " + id));
         

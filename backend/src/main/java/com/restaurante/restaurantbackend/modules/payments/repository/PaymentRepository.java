@@ -2,6 +2,8 @@ package com.restaurante.restaurantbackend.modules.payments.repository;
 
 import com.restaurante.restaurantbackend.modules.payments.model.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -20,4 +22,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByPaymentDateBetween(LocalDate startDate, LocalDate endDate);
 
     List<Payment> findByPaymentDate(LocalDate date);
+
+    List<Payment> findByPaymentDateGreaterThanEqual(LocalDate date);
+
+    List<Payment> findByPaymentDateGreaterThan(LocalDate date);
+
+    @Query("SELECT COUNT(p) FROM Payment p WHERE p.paymentDate = :date AND p.status = :status")
+    int countByPaymentDateAndStatus(@Param("date") LocalDate date, @Param("status") String status);
 }

@@ -173,17 +173,6 @@ const Deliveries = () => {
     }
   };
 
-  const getOrderStatusBadge = (status) => {
-    const badges = {
-      PENDIENTE: { emoji: '🟡', text: 'Pendiente', class: 'badge-warning' },
-      EN_PREPARACION: { emoji: '🔵', text: 'En Proceso', class: 'badge-info' },
-      LISTO: { emoji: '🟢', text: 'Listo', class: 'badge-success' },
-      SERVIDO: { emoji: '✅', text: 'Servido', class: 'badge-primary' },
-      CANCELADO: { emoji: '🔴', text: 'Cancelado', class: 'badge-danger' },
-    };
-    return badges[status] || { emoji: '', text: status, class: 'badge-secondary' };
-  };
-
   const getStatusBadge = (status) => {
     const statusConfig = {
       PENDING: { label: 'Pendiente', className: 'badge-warning' },

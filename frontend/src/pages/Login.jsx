@@ -34,8 +34,6 @@ const Login = () => {
       const result = await login(credentials.username, credentials.password);
       
       if (result.success) {
-        console.log('Login successful, user role:', result.user.role);
-        
         // Redirigir según el rol del usuario
         switch (result.user.role?.toUpperCase()) {
           case 'ADMIN':

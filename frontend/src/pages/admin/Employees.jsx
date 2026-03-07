@@ -65,10 +65,6 @@ const Employees = () => {
     try {
       setLoading(true);
       setFormError('');
-      console.log('📤 Datos a enviar al backend:', formData);
-      console.log('📏 Longitud firstName:', formData.firstName?.length);
-      console.log('📏 Longitud lastName:', formData.lastName?.length);
-      console.log('📏 Longitud email:', formData.email?.length);
       
       if (editingEmployee) {
         // Editar empleado existente

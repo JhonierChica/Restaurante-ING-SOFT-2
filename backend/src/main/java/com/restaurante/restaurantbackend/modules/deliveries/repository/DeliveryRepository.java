@@ -23,5 +23,8 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     @Query("SELECT d FROM Delivery d ORDER BY d.createdAt DESC")
     List<Delivery> findAllOrderByCreatedAtDesc();
     
+    @Query("SELECT d FROM Delivery d WHERE d.status IN :statuses ORDER BY d.createdAt DESC")
+    List<Delivery> findByStatusInOrderByCreatedAtDesc(List<DeliveryStatus> statuses);
+    
     Optional<Delivery> findByOrderId(Long orderId);
 }

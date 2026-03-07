@@ -1,5 +1,7 @@
 package com.restaurante.restaurantbackend.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,6 +19,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Maneja excepciones generales de runtime
@@ -89,9 +93,7 @@ public class GlobalExceptionHandler {
         errorResponse.put("message", "Error interno del servidor");
         errorResponse.put("path", request.getDescription(false).replace("uri=", ""));
         
-        // Log del error para debugging
-        System.err.println("Error no manejado: " + ex.getMessage());
-        ex.printStackTrace();
+        log.error("Unhandled exception: {}", ex.getMessage(), ex);
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }

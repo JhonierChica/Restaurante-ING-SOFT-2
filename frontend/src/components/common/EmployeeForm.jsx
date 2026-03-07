@@ -1,21 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import '../../styles/Forms.css';
 
 const EmployeeForm = ({ onComplete, onCancel, positions, serverError, initialData }) => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    documentNumber: '',
-    phone: '',
-    address: '',
-    positionId: '',
-  });
-
-  // Cargar datos iniciales cuando se edita
-  useEffect(() => {
+  const [formData, setFormData] = useState(() => {
     if (initialData) {
-      setFormData({
+      return {
         firstName: initialData.firstName || '',
         lastName: initialData.lastName || '',
         email: initialData.email || '',
@@ -23,9 +12,18 @@ const EmployeeForm = ({ onComplete, onCancel, positions, serverError, initialDat
         phone: initialData.phone || '',
         address: initialData.address || '',
         positionId: initialData.position?.id || '',
-      });
+      };
     }
-  }, [initialData]);
+    return {
+      firstName: '',
+      lastName: '',
+      email: '',
+      documentNumber: '',
+      phone: '',
+      address: '',
+      positionId: '',
+    };
+  });
 
   const [errors, setErrors] = useState({});
 

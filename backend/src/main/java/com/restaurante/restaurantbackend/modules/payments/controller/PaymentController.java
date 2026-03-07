@@ -57,6 +57,11 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getAllPayments());
     }
 
+    @GetMapping("/unclosed")
+    public ResponseEntity<List<PaymentResponse>> getUnclosedPayments() {
+        return ResponseEntity.ok(paymentService.getUnclosedPayments());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponse> getPaymentById(@PathVariable Long id) {
         try {

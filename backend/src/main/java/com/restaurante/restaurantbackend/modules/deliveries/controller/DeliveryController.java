@@ -4,6 +4,8 @@ import com.restaurante.restaurantbackend.modules.deliveries.dto.CreateDeliveryRe
 import com.restaurante.restaurantbackend.modules.deliveries.dto.DeliveryResponse;
 import com.restaurante.restaurantbackend.modules.deliveries.dto.UpdateDeliveryStatusRequest;
 import com.restaurante.restaurantbackend.modules.deliveries.service.DeliveryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +17,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/deliveries")
-@CrossOrigin(origins = "*")
 public class DeliveryController {
+
+    private static final Logger log = LoggerFactory.getLogger(DeliveryController.class);
 
     private final DeliveryService deliveryService;
 
@@ -38,22 +41,19 @@ public class DeliveryController {
     public ResponseEntity<List<DeliveryResponse>> getAllDeliveries(
             @RequestParam(required = false) Boolean activeOnly) {
         try {
-            System.out.println("[DeliveryController] GET /api/deliveries - activeOnly: " + activeOnly);
+            log.debug("GET /api/deliveries - activeOnly: {}", activeOnly);
             List<DeliveryResponse> deliveries;
             
             if (activeOnly != null && activeOnly) {
-                System.out.println("[DeliveryController] Fetching active deliveries only");
                 deliveries = deliveryService.getActiveDeliveries();
             } else {
-                System.out.println("[DeliveryController] Fetching all deliveries");
                 deliveries = deliveryService.getAllDeliveries();
             }
             
-            System.out.println("[DeliveryController] Successfully fetched " + deliveries.size() + " deliveries");
+            log.debug("Fetched {} deliveries", deliveries.size());
             return ResponseEntity.ok(deliveries);
         } catch (Exception e) {
-            System.err.println("[DeliveryController] ERROR getting deliveries: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error getting deliveries: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
@@ -96,20 +96,8 @@ public class DeliveryController {
         }
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<DeliveryResponse> updateDeliveryStatus(
-            @PathVariable Long id,
-            @RequestBody UpdateDeliveryStatusRequest request) {
-        try {
-            DeliveryResponse delivery = deliveryService.updateDeliveryStatus(id, request);
-            return ResponseEntity.ok(delivery);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
     @PutMapping("/{id}/status")
-    public ResponseEntity<DeliveryResponse> updateDeliveryStatusPut(
+    public ResponseEntity<DeliveryResponse> updateDeliveryStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> statusMap) {
         try {

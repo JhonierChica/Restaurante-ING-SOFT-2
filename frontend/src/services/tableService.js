@@ -27,7 +27,7 @@ export const tableService = {
   },
 
   getAvailableTables: async () => {
-    const response = await apiClient.get('/tables/available');
+    const response = await apiClient.get('/tables?status=DISPONIBLE');
     return response.data;
   },
 };

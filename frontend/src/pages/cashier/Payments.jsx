@@ -22,7 +22,7 @@ const Payments = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const paymentsData = await paymentService.getAllPayments();
+      const paymentsData = await paymentService.getUnclosedPayments();
       setPayments(paymentsData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -37,6 +37,8 @@ const Payments = () => {
       await cashRegisterService.createDailyCashClose(user?.username || 'Sistema');
       alert('✅ Cierre de caja del día realizado exitosamente');
       setShowCashCloseConfirm(false);
+      // Recargar pagos para que se vacíe la tabla tras el cierre
+      await loadData();
     } catch (error) {
       console.error('Error al realizar cierre de caja:', error);
       const msg = error.response?.data?.message || error.message || 'Error al realizar cierre de caja';
@@ -56,21 +58,20 @@ const Payments = () => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString('es-CO', {
+    // Agregar T00:00:00 para evitar que JS interprete la fecha como UTC
+    const date = typeof dateStr === 'string' && !dateStr.includes('T')
+      ? new Date(dateStr + 'T00:00:00')
+      : new Date(dateStr);
+    return date.toLocaleDateString('es-CO', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
     });
   };
 
-  // Calcular totales del día
-  const today = new Date().toISOString().split('T')[0];
-  const todayPayments = payments.filter(p => {
-    if (!p.paymentDate) return false;
-    const pDate = typeof p.paymentDate === 'string' ? p.paymentDate : new Date(p.paymentDate).toISOString().split('T')[0];
-    return pDate === today;
-  });
-  const todayTotal = todayPayments
+  // Calcular totales basados en los pagos sin cierre
+  const totalPayments = payments.length;
+  const totalAmount = payments
     .filter(p => p.status === 'COMPLETADO')
     .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
@@ -108,13 +109,14 @@ const Payments = () => {
           actions={
             <button
               onClick={() => setShowCashCloseConfirm(true)}
+              disabled={payments.length === 0}
               style={{
                 padding: '10px 20px',
-                backgroundColor: '#dc3545',
+                backgroundColor: payments.length === 0 ? '#999' : '#dc3545',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: 'pointer',
+                cursor: payments.length === 0 ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 display: 'flex',
@@ -122,8 +124,8 @@ const Payments = () => {
                 gap: '8px',
                 transition: 'background-color 0.2s ease'
               }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
+              onMouseOver={(e) => { if (payments.length > 0) e.currentTarget.style.backgroundColor = '#c82333'; }}
+              onMouseOut={(e) => { if (payments.length > 0) e.currentTarget.style.backgroundColor = '#dc3545'; }}
             >
               <CashRegisterIcon size={18} /> Cierre de Caja
             </button>
@@ -132,34 +134,28 @@ const Payments = () => {
           <div className="payment-summary">
             <div className="summary-card">
               <h4>Total de Pagos</h4>
-              <p className="summary-value">{payments.length}</p>
+              <p className="summary-value">{totalPayments}</p>
             </div>
             <div className="summary-card">
-              <h4>Pagos del Día</h4>
-              <p className="summary-value">{todayPayments.length}</p>
-            </div>
-            <div className="summary-card">
-              <h4>Total del Día</h4>
+              <h4>Total Pendiente de Cierre</h4>
               <p className="summary-value" style={{ color: '#28a745' }}>
-                ${todayTotal.toFixed(2)}
-              </p>
-            </div>
-            <div className="summary-card">
-              <h4>Total Histórico</h4>
-              <p className="summary-value">
-                ${payments
-                  .filter(p => p.status === 'COMPLETADO')
-                  .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-                  .toFixed(2)}
+                ${totalAmount.toFixed(2)}
               </p>
             </div>
           </div>
 
-          <Table
-            columns={columns}
-            data={payments}
-            actions={false}
-          />
+          {payments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
+              <p style={{ fontSize: '16px', marginBottom: '8px' }}>✅ No hay pagos pendientes de cierre</p>
+              <p style={{ fontSize: '13px' }}>Los pagos confirmados aparecerán aquí hasta que se realice el cierre de caja.</p>
+            </div>
+          ) : (
+            <Table
+              columns={columns}
+              data={payments}
+              actions={false}
+            />
+          )}
         </Card>
 
         <ConfirmDialog
@@ -167,7 +163,7 @@ const Payments = () => {
           onClose={() => setShowCashCloseConfirm(false)}
           onConfirm={handleCashClose}
           title="Cierre de Caja"
-          message={`¿Está seguro de realizar el cierre de caja del día de hoy? Se registrarán ${todayPayments.length} transacciones por un total de $${todayTotal.toFixed(2)}. Esta acción no se puede deshacer.`}
+          message={`¿Está seguro de realizar el cierre de caja? Se registrarán ${totalPayments} transacciones por un total de $${totalAmount.toFixed(2)}. Esta acción no se puede deshacer.`}
         />
       </div>
     </Layout>

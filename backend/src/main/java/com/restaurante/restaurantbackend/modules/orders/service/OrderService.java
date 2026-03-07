@@ -12,82 +12,89 @@ import com.restaurante.restaurantbackend.modules.orders.model.OrderItem;
 import com.restaurante.restaurantbackend.modules.orders.repository.OrderRepository;
 import com.restaurante.restaurantbackend.modules.tables.model.RestaurantTable;
 import com.restaurante.restaurantbackend.modules.tables.repository.RestaurantTableRepository;
+import com.restaurante.restaurantbackend.modules.users.model.User;
+import com.restaurante.restaurantbackend.modules.users.repository.UserRepository;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class OrderService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
+    private final EntityManager entityManager;
     private final OrderRepository orderRepository;
     private final ClientRepository clientRepository;
     private final RestaurantTableRepository tableRepository;
     private final MenuItemRepository menuItemRepository;
-    private final com.restaurante.restaurantbackend.modules.users.repository.UserRepository userRepository;
+    private final UserRepository userRepository;
     private final DeliveryService deliveryService;
 
     public OrderService(OrderRepository orderRepository, 
                        ClientRepository clientRepository,
                        RestaurantTableRepository tableRepository,
                        MenuItemRepository menuItemRepository,
-                       com.restaurante.restaurantbackend.modules.users.repository.UserRepository userRepository,
-                       DeliveryService deliveryService) {
+                       UserRepository userRepository,
+                       DeliveryService deliveryService,
+                       EntityManager entityManager) {
         this.orderRepository = orderRepository;
         this.clientRepository = clientRepository;
         this.tableRepository = tableRepository;
         this.menuItemRepository = menuItemRepository;
         this.userRepository = userRepository;
         this.deliveryService = deliveryService;
+        this.entityManager = entityManager;
     }
 
     public OrderResponse createOrder(CreateOrderRequest request) {
-        System.out.println("[OrderService] Starting createOrder process...");
+        log.info("Starting createOrder process...");
         
         // Validar que el cliente existe
-        System.out.println("[OrderService] Validating client with ID: " + request.getClientId());
+        log.debug("Validating client with ID: {}", request.getClientId());
         Client client = clientRepository.findById(request.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client not found with id: " + request.getClientId()));
-        System.out.println("[OrderService] Client found: " + client.getName() + " | Phone: " + client.getPhone() + " | Address: " + client.getAddress());
 
         // Validar que el usuario existe
-        System.out.println("[OrderService] Validating user with ID: " + request.getUserId());
-        com.restaurante.restaurantbackend.modules.users.model.User user = userRepository.findById(request.getUserId())
+        log.debug("Validating user with ID: {}", request.getUserId());
+        User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
-        System.out.println("[OrderService] User found: " + user.getUsername());
 
         // Validar que la mesa existe
-        System.out.println("[OrderService] Validating table with ID: " + request.getTableId());
+        log.debug("Validating table with ID: {}", request.getTableId());
         RestaurantTable table = tableRepository.findById(request.getTableId())
                 .orElseThrow(() -> new RuntimeException("Table not found with id: " + request.getTableId()));
-        System.out.println("[OrderService] Table found: #" + table.getTableNumber() + " | Location: " + table.getLocation());
 
         // Validar que hay items en el pedido
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("Order must have at least one item");
         }
 
-        // Calcular el total primero
+        // Pre-fetch all menu items in a single query to avoid N+1
+        List<Long> menuItemIds = request.getItems().stream()
+                .map(OrderItemRequest::getMenuItemId)
+                .collect(Collectors.toList());
+        Map<Long, MenuItem> menuItemMap = menuItemRepository.findAllById(menuItemIds).stream()
+                .collect(Collectors.toMap(MenuItem::getId, m -> m));
+
+        // Validate all menu items exist and are available, then calculate total
         float totalAmount = 0f;
         for (OrderItemRequest itemRequest : request.getItems()) {
-            MenuItem menuItem = menuItemRepository.findById(itemRequest.getMenuItemId())
-                    .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + itemRequest.getMenuItemId()));
-
-            // Verificar que el item está disponible
+            MenuItem menuItem = menuItemMap.get(itemRequest.getMenuItemId());
+            if (menuItem == null) {
+                throw new RuntimeException("Menu item not found with id: " + itemRequest.getMenuItemId());
+            }
             if (!menuItem.getAvailable()) {
                 throw new RuntimeException("Menu item is not available: " + menuItem.getName());
             }
-
-            // Calcular subtotal del item
-            float itemSubtotal = menuItem.getPrice() * itemRequest.getQuantity();
-            totalAmount += itemSubtotal;
+            totalAmount += menuItem.getPrice() * itemRequest.getQuantity();
         }
 
         // Crear la orden SIN items primero
@@ -106,13 +113,12 @@ public class OrderService {
         // Flush para forzar el INSERT y generar el ID inmediatamente
         entityManager.flush();
         
-        // Ahora agregar items con el Order ya persistido (tiene ID)
+        // Ahora agregar items con el Order ya persistido (tiene ID) — reuse cached menu items
         for (OrderItemRequest itemRequest : request.getItems()) {
-            MenuItem menuItem = menuItemRepository.findById(itemRequest.getMenuItemId())
-                    .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + itemRequest.getMenuItemId()));
+            MenuItem menuItem = menuItemMap.get(itemRequest.getMenuItemId());
 
             OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(savedOrder); // savedOrder ya tiene ID generado
+            orderItem.setOrder(savedOrder);
             orderItem.setMenuItem(menuItem);
             orderItem.setQuantity(itemRequest.getQuantity());
             orderItem.setUnitPrice(menuItem.getPrice());
@@ -126,23 +132,22 @@ public class OrderService {
         
         // Si el pedido es de tipo DOMICILIO, crear automáticamente el registro en deliveries
         if ("DOMICILIO".equals(savedOrder.getOrderType())) {
-            System.out.println("[OrderService] Order type is DOMICILIO, creating delivery record...");
+            log.info("Order type is DOMICILIO, creating delivery record...");
             try {
                 createDeliveryFromOrder(savedOrder);
-                System.out.println("[OrderService] Delivery record created successfully");
+                log.info("Delivery record created successfully for order ID: {}", savedOrder.getId());
             } catch (Exception e) {
-                System.err.println("[OrderService] ERROR creating delivery: " + e.getMessage());
-                e.printStackTrace();
+                log.error("Error creating delivery for order ID {}: {}", savedOrder.getId(), e.getMessage(), e);
                 throw new RuntimeException("Error creating delivery: " + e.getMessage());
             }
         }
         
-        System.out.println("[OrderService] Order created successfully with ID: " + savedOrder.getId());
+        log.info("Order created successfully with ID: {}", savedOrder.getId());
         return mapToResponse(savedOrder);
     }
     
     private void createDeliveryFromOrder(Order order) {
-        System.out.println("[OrderService] Creating delivery from order ID: " + order.getId());
+        log.debug("Creating delivery from order ID: {}", order.getId());
         
         CreateDeliveryRequest deliveryRequest = new CreateDeliveryRequest();
         deliveryRequest.setOrderId(order.getId());
@@ -247,15 +252,33 @@ public class OrderService {
     }
 
     public OrderResponse updateOrderStatus(Long id, Order.OrderStatus status) {
-        System.out.println("[OrderService] Updating order status for ID: " + id + " to: " + status);
+        log.info("Updating order status for ID: {} to: {}", id, status);
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
-        System.out.println("[OrderService] Order found. Current status: " + order.getOrderStatus());
         order.setOrderStatus(status);
-        System.out.println("[OrderService] Status set, saving order...");
         Order savedOrder = orderRepository.save(order);
-        System.out.println("[OrderService] Order saved successfully");
+        log.info("Order {} status updated successfully to {}", id, status);
         return mapToResponse(savedOrder);
+    }
+
+    /**
+     * Overload that accepts a raw status string, validates and parses it to OrderStatus enum.
+     */
+    public OrderResponse updateOrderStatus(Long id, String statusString) {
+        if (statusString == null || statusString.isBlank()) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
+        String statusUpper = statusString.toUpperCase().trim();
+        Order.OrderStatus orderStatus;
+        try {
+            orderStatus = Order.OrderStatus.valueOf(statusUpper);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Invalid status value: " + statusString + ". Valid values: PENDIENTE, EN_PREPARACION, LISTO, SERVIDO, CANCELADO");
+        }
+
+        return updateOrderStatus(id, orderStatus);
     }
 
     public void deleteOrder(Long id) {

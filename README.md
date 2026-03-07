@@ -4,6 +4,13 @@
 > **Sistema:** Restaurant Management System — Mr. Panzo  
 > **Stack:** Spring Boot + React + PostgreSQL
 
+HACER QUE LOS MESEROS PUEDAN ACCEDER A LOS DOMICILIO, 
+LOS MESEROS NO PUDEN REALIZAR EL COBRO,
+MANEJARLO CON WEBSOCKET EN TIEMPO REAL LOS PEDIDOS
+LOS PAGOS NO SE GUARDAN SI YA SE CERRO CAJA 
+SOLO DEJA BORRAR, USUARIOS, Y MET DE PAGO
+la difrencia de los pdfs sigue sin salir
+
 ---
 
 ## 📑 Tabla de Contenidos

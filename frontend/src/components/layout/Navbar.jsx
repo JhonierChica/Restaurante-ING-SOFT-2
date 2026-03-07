@@ -34,7 +34,6 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef(null);
-  const scrollPositionRef = useRef(0);
 
   // Estado persistente para grupos colapsables
   const [expandedGroups, setExpandedGroups] = useState(() => {
@@ -91,11 +90,12 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
         return {
           mainItems: [
             { path: ROUTES.WAITER_ORDERS, label: 'Pedidos', icon: <OrdersIcon /> },
-            { path: ROUTES.CASHIER_TABLES, label: 'Mesas', icon: <TableIcon /> },
-            { path: ROUTES.CASHIER_CLIENTS, label: 'Clientes', icon: <ClientsIcon /> },
             { path: ROUTES.CASHIER_DELIVERIES, label: 'Domicilios', icon: <DeliveryIcon /> },
             { path: ROUTES.CASHIER_PAYMENTS, label: 'Pagos', icon: <PaymentIcon /> },
             { path: ROUTES.CASHIER_CASH_REGISTER, label: 'Cierre de Caja', icon: <CashRegisterIcon /> },
+            { path: ROUTES.CASHIER_CLIENTS, label: 'Clientes', icon: <ClientsIcon /> },
+            { path: ROUTES.CASHIER_TABLES, label: 'Mesas', icon: <TableIcon /> },
+           
           ],
           groups: [
             {
@@ -150,7 +150,7 @@ const Navbar = React.memo(({ collapsed, onToggle }) => {
       default:
         return { mainItems: [], groups: [] };
     }
-  }, [user?.role]);
+  }, [user]);
 
   const menuStructure = getMenuStructure;
 

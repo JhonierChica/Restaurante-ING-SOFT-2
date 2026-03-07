@@ -2,7 +2,6 @@ package com.restaurante.restaurantbackend.modules.users.service;
 
 import com.restaurante.restaurantbackend.modules.employees.model.Employee;
 import com.restaurante.restaurantbackend.modules.employees.repository.EmployeeRepository;
-import com.restaurante.restaurantbackend.modules.permissions.dto.PermissionResponse;
 import com.restaurante.restaurantbackend.modules.profiles.dto.ProfileResponse;
 import com.restaurante.restaurantbackend.modules.profiles.model.Profile;
 import com.restaurante.restaurantbackend.modules.profiles.repository.ProfileRepository;
@@ -152,26 +151,7 @@ public class UserService {
     }
 
     private UserResponse mapToResponse(User user) {
-        ProfileResponse profileResponse = null;
-        if (user.getProfile() != null) {
-            profileResponse = new ProfileResponse(
-                    user.getProfile().getId(),
-                    user.getProfile().getCode(),
-                    user.getProfile().getName(),
-                    user.getProfile().getDescription(),
-                    user.getProfile().getPermissions().stream()
-                            .map(p -> new PermissionResponse(
-                                    p.getId(),
-                                    p.getCode(),
-                                    p.getName(),
-                                    p.getDescription(),
-                                    p.getModule(),
-                                    p.getActive()
-                            ))
-                            .collect(Collectors.toSet()),
-                    user.getProfile().getActive()
-            );
-        }
+        ProfileResponse profileResponse = ProfileResponse.fromEntity(user.getProfile());
 
         // Obtener fullName del empleado asociado
         String fullName = user.getFullName();

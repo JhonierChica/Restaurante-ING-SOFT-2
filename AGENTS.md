@@ -110,6 +110,9 @@ modules/<nombre>/
 - **Sin Spring Security**: autenticación basada en token simple (`Bearer_userId_timestamp`), contraseñas en texto plano.
 - Los pedidos de tipo **DOMICILIO** crean automáticamente un registro `Delivery`.
 - La entidad `OrderItem` usa una **clave compuesta** `(id_pedido, id_menu)`.
+- **Módulo Payments (Pagos):** La vista del cajero solo muestra pagos completados que aún no han sido incluidos en un cierre de caja (endpoint `/api/payments/unclosed`). Tras realizar un cierre de caja, la tabla se vacía y las métricas se reinician a 0. Las fechas de pago se formatean con zona horaria local (no UTC) para evitar desfase de un día.
+- **Módulo Cash Register (Cierres de Caja):** El cierre diario calcula automáticamente `totalSales`, `initialAmount` (del último cierre), `finalAmount` (inicial + ventas) y `difference` (final - inicial - ventas). La diferencia se muestra como `finalAmount - initialAmount - totalSales` en el frontend. La exportación PDF permite seleccionar: último cierre, día específico, mes específico o año específico mediante un modal interactivo.
+- **PaymentService** inyecta `CashRegisterCloseRepository` para determinar la fecha del último cierre y filtrar pagos sin cerrar.
 
 ---
 
@@ -153,6 +156,7 @@ src/
 - **Usuario BD:** `postgres`
 - **DDL:** Gestionado manualmente en `backend/sql/dbActual.sql`
 - **Datos iniciales:** `backend/sql/datos_iniciales.sql` (solo usuario admin)
+- **Script de limpieza:** `backend/sql/limpiar_ordenes_pagos_cierres.sql` (elimina datos de pedidos, pagos, entregas y cierres de caja para pruebas)
 - **Credenciales iniciales:** usuario `admin` / contraseña `admin123`
 - **Convención de nombres:** tablas y columnas en español (`pedido`, `empleado`, `categoría`, `menú`, etc.)
 
@@ -237,6 +241,8 @@ Todos los endpoints usan el prefijo `/api`. Formato de respuestas JSON.
 - `GET /api/orders?status=X` — Filtrar pedidos por estado
 - `PATCH /api/employees/{id}/deactivate` — Desactivar empleado
 - `GET /api/employees/active` — Solo empleados activos
+- `GET /api/payments/unclosed` — Pagos completados pendientes de cierre de caja (posteriores al último cierre)
+- `POST /api/cash-register-closes/daily-close` — Cierre de caja diario automático (calcula totales desde pagos del día)
 
 ---
 

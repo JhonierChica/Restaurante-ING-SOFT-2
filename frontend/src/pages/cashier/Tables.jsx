@@ -153,7 +153,7 @@ const Tables = () => {
                     <span className="profile-id">Capacidad: {table.capacity} personas</span>
                   </div>
                   <span className={`badge ${getStatusClass(table.status)}`}>
-                    {getStatusBadge(table.status).replace(/^[🟢🔴🟡⚫]\s/, '')}
+                    {getStatusBadge(table.status).replace(/^[🟢🔴🟡⚫]\s/u, '')}
                   </span>
                 </div>
                 

@@ -7,7 +7,7 @@ import Login from './pages/Login';
 // Admin pages
 import Profiles from './pages/admin/Profiles';
 import Positions from './pages/admin/Positions';
-import EmployeesNew from './pages/admin/EmployeesNew';
+import Employees from './pages/admin/Employees';
 import Users from './pages/admin/Users';
 import Categories from './pages/admin/Categories';
 import Menu from './pages/admin/Menu';
@@ -55,7 +55,7 @@ function App() {
             path={ROUTES.ADMIN_EMPLOYEES}
             element={
               <ProtectedRoute requiredRole={USER_ROLES.ADMIN}>
-                <EmployeesNew />
+                <Employees />
               </ProtectedRoute>
             }
           />

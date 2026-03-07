@@ -14,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cash-register-closes")
-@CrossOrigin(origins = "*")
 public class CashRegisterCloseController {
 
     private final CashRegisterCloseService cashRegisterCloseService;

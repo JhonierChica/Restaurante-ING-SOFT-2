@@ -6,6 +6,11 @@ export const paymentService = {
     return response.data;
   },
 
+  getUnclosedPayments: async () => {
+    const response = await apiClient.get('/payments/unclosed');
+    return response.data;
+  },
+
   getPaymentById: async (id) => {
     const response = await apiClient.get(`/payments/${id}`);
     return response.data;

@@ -37,12 +37,12 @@ export const orderService = {
   },
 
   getOrdersByTable: async (tableId) => {
-    const response = await apiClient.get(`/orders/table/${tableId}`);
+    const response = await apiClient.get(`/orders?tableId=${tableId}`);
     return response.data;
   },
 
   getPendingOrders: async () => {
-    const response = await apiClient.get('/orders/pending');
+    const response = await apiClient.get('/orders?status=PENDIENTE');
     return response.data;
   },
 };

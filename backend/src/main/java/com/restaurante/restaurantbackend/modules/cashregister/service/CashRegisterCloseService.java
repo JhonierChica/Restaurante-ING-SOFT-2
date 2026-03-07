@@ -6,6 +6,8 @@ import com.restaurante.restaurantbackend.modules.cashregister.model.CashRegister
 import com.restaurante.restaurantbackend.modules.cashregister.repository.CashRegisterCloseRepository;
 import com.restaurante.restaurantbackend.modules.payments.model.Payment;
 import com.restaurante.restaurantbackend.modules.payments.repository.PaymentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CashRegisterCloseService {
+
+    private static final Logger log = LoggerFactory.getLogger(CashRegisterCloseService.class);
 
     private final CashRegisterCloseRepository cashRegisterCloseRepository;
     private final PaymentRepository paymentRepository;
@@ -62,12 +66,12 @@ public class CashRegisterCloseService {
                 initialAmount = lastClose.getFinalAmount();
             }
         } catch (Exception e) {
-            // Si no hay cierres previos, el monto inicial es 0
+            log.warn("No previous cash register closes found, using initial amount of 0: {}", e.getMessage());
         }
 
         BigDecimal finalAmount = initialAmount.add(totalSales);
-        BigDecimal expectedAmount = finalAmount;
-        BigDecimal difference = BigDecimal.ZERO; // Sin diferencia en cierre automático
+        BigDecimal expectedAmount = initialAmount.add(totalSales);
+        BigDecimal difference = finalAmount.subtract(expectedAmount);
 
         CashRegisterClose close = new CashRegisterClose();
         close.setOpeningDate(startOfDay);

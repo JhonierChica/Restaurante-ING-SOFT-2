@@ -5,23 +5,28 @@ import com.restaurante.restaurantbackend.modules.employees.dto.EmployeeResponse;
 import com.restaurante.restaurantbackend.modules.employees.dto.UpdateEmployeeRequest;
 import com.restaurante.restaurantbackend.modules.employees.model.Employee;
 import com.restaurante.restaurantbackend.modules.employees.repository.EmployeeRepository;
-import com.restaurante.restaurantbackend.modules.permissions.dto.PermissionResponse;
 import com.restaurante.restaurantbackend.modules.positions.dto.PositionResponse;
 import com.restaurante.restaurantbackend.modules.positions.model.Position;
 import com.restaurante.restaurantbackend.modules.positions.repository.PositionRepository;
 import com.restaurante.restaurantbackend.modules.profiles.dto.ProfileResponse;
-import com.restaurante.restaurantbackend.modules.profiles.repository.ProfileRepository;
+import com.restaurante.restaurantbackend.modules.users.model.User;
 import com.restaurante.restaurantbackend.modules.users.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class EmployeeService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmployeeService.class);
 
     private final EmployeeRepository employeeRepository;
     private final PositionRepository positionRepository;
@@ -29,19 +34,15 @@ public class EmployeeService {
     
     public EmployeeService(EmployeeRepository employeeRepository, 
                           UserRepository userRepository,
-                          PositionRepository positionRepository,
-                          ProfileRepository profileRepository) {
+                          PositionRepository positionRepository) {
         this.employeeRepository = employeeRepository;
         this.positionRepository = positionRepository;
         this.userRepository = userRepository;
     }
 
     public EmployeeResponse createEmployee(CreateEmployeeRequest request) {
-        System.out.println("📥 Recibiendo petición para crear empleado:");
-        System.out.println("   - firstName: " + request.getFirstName());
-        System.out.println("   - lastName: " + request.getLastName());
-        System.out.println("   - email: " + request.getEmail());
-        System.out.println("   - positionId: " + request.getPositionId());
+        log.debug("Creating employee - firstName: {}, lastName: {}, email: {}, positionId: {}",
+                request.getFirstName(), request.getLastName(), request.getEmail(), request.getPositionId());
         
         // VALIDACIONES
         
@@ -60,7 +61,7 @@ public class EmployeeService {
         // 3. Validar que el cargo existe
         Position position = positionRepository.findById(request.getPositionId())
                 .orElseThrow(() -> new RuntimeException("Cargo no encontrado con id: " + request.getPositionId()));
-        System.out.println("✅ Cargo encontrado: " + position.getName());
+        log.debug("Position found: {}", position.getName());
         
         // CREAR EMPLEADO
         Employee employee = new Employee();
@@ -78,29 +79,27 @@ public class EmployeeService {
         employee.setActive(true);
 
         Employee savedEmployee = employeeRepository.save(employee);
-        System.out.println("✅ Empleado creado con ID: " + savedEmployee.getId());
+        log.info("Employee created with ID: {}", savedEmployee.getId());
         
         return mapToResponse(savedEmployee);
     }
 
     @Transactional(readOnly = true)
     public List<EmployeeResponse> getAllEmployees() {
-        return employeeRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Employee> employees = employeeRepository.findAll();
+        return mapToResponseList(employees);
     }
 
     @Transactional(readOnly = true)
     public List<EmployeeResponse> getActiveEmployees() {
-        return employeeRepository.findByActiveTrue().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Employee> employees = employeeRepository.findByActiveTrue();
+        return mapToResponseList(employees);
     }
 
     @Transactional(readOnly = true)
     public List<EmployeeResponse> getEmployeesWithoutUser() {
         return employeeRepository.findByUserIsNull().stream()
-                .map(this::mapToResponse)
+                .map(emp -> mapToResponse(emp, null))
                 .collect(Collectors.toList());
     }
 
@@ -196,7 +195,42 @@ public class EmployeeService {
         employeeRepository.save(employee);
     }
 
+    /**
+     * Batch-maps a list of employees to responses, loading all associated users in one query
+     * to avoid N+1 performance issues.
+     */
+    private List<EmployeeResponse> mapToResponseList(List<Employee> employees) {
+        if (employees.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> employeeIds = employees.stream()
+                .map(Employee::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, User> usersByEmployeeId = userRepository.findByEmployeeIdIn(employeeIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        u -> u.getEmployee().getId(),
+                        Function.identity(),
+                        (a, b) -> a // in case of duplicates, keep first
+                ));
+
+        return employees.stream()
+                .map(emp -> mapToResponse(emp, usersByEmployeeId.get(emp.getId())))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Maps an employee to its response DTO.
+     * When called without a pre-fetched user, falls back to a single DB lookup.
+     */
     private EmployeeResponse mapToResponse(Employee employee) {
+        var userOptional = userRepository.findByEmployeeId(employee.getId());
+        return mapToResponse(employee, userOptional.orElse(null));
+    }
+
+    private EmployeeResponse mapToResponse(Employee employee, User user) {
         // Mapear Position
         PositionResponse positionResponse = null;
         if (employee.getPosition() != null) {
@@ -212,38 +246,15 @@ public class EmployeeService {
             );
         }
 
-        // Buscar usuario asociado a este empleado desde UserRepository
+        // Mapear datos de usuario si existe
         ProfileResponse profileResponse = null;
         Long userId = null;
         String username = null;
         
-        // Buscar usuario por employeeId de forma optimizada
-        var userOptional = userRepository.findByEmployeeId(employee.getId());
-        
-        if (userOptional.isPresent()) {
-            var user = userOptional.get();
+        if (user != null) {
             userId = user.getId();
             username = user.getUsername();
-            
-            if (user.getProfile() != null) {
-                profileResponse = new ProfileResponse(
-                        user.getProfile().getId(),
-                        user.getProfile().getCode(),
-                        user.getProfile().getName(),
-                        user.getProfile().getDescription(),
-                        user.getProfile().getPermissions().stream()
-                                .map(p -> new PermissionResponse(
-                                        p.getId(),
-                                        p.getCode(),
-                                        p.getName(),
-                                        p.getDescription(),
-                                        p.getModule(),
-                                        p.getActive()
-                                ))
-                                .collect(Collectors.toSet()),
-                        user.getProfile().getActive()
-                );
-            }
+            profileResponse = ProfileResponse.fromEntity(user.getProfile());
         }
 
         // Construir nombre completo

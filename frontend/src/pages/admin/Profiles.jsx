@@ -13,7 +13,7 @@ import '../../styles/Profiles.css';
 
 const Profiles = () => {
   const [profiles, setProfiles] = useState([]);
-  const [permissions, setPermissions] = useState([]);
+  const [_permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);

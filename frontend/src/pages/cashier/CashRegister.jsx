@@ -10,12 +10,17 @@ import { cashRegisterService } from '../../services/cashRegisterService';
 const CashRegister = () => {
   const [closes, setCloses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState('all'); // 'all', 'daily', 'monthly', 'annual'
+  const [filterType, setFilterType] = useState('all');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedClose, setSelectedClose] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState('last');
+  const [exportDate, setExportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [exportYear, setExportYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
     loadData();
@@ -59,8 +64,9 @@ const CashRegister = () => {
   };
 
   const getDifferenceColor = (difference) => {
-    if (difference > 0) return '#10b981';
-    if (difference < 0) return '#ef4444';
+    const val = parseFloat(difference || 0);
+    if (val > 0) return '#10b981';
+    if (val < 0) return '#ef4444';
     return '#6b7280';
   };
 
@@ -73,10 +79,15 @@ const CashRegister = () => {
       const closeDate = new Date(close.closingDate);
       
       if (filterType === 'daily') {
-        return closeDate.toISOString().split('T')[0] === selectedDate;
+        const closeDateStr = closeDate.getFullYear() + '-' +
+          String(closeDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(closeDate.getDate()).padStart(2, '0');
+        return closeDateStr === selectedDate;
       }
       if (filterType === 'monthly') {
-        return closeDate.toISOString().slice(0, 7) === selectedMonth;
+        const closeMonthStr = closeDate.getFullYear() + '-' +
+          String(closeDate.getMonth() + 1).padStart(2, '0');
+        return closeMonthStr === selectedMonth;
       }
       if (filterType === 'annual') {
         return closeDate.getFullYear().toString() === selectedYear;
@@ -92,12 +103,58 @@ const CashRegister = () => {
   const totalTransactions = filteredCloses.reduce((sum, c) => sum + (c.totalTransactions || 0), 0);
   const totalDifference = filteredCloses.reduce((sum, c) => sum + parseFloat(c.difference || 0), 0);
 
+  // Obtener cierres para exportación según el tipo seleccionado
+  const getExportCloses = () => {
+    if (exportType === 'last') {
+      return closes.length > 0 ? [closes[0]] : [];
+    }
+    return closes.filter(close => {
+      if (!close.closingDate) return false;
+      const closeDate = new Date(close.closingDate);
+      
+      if (exportType === 'daily') {
+        const closeDateStr = closeDate.getFullYear() + '-' +
+          String(closeDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(closeDate.getDate()).padStart(2, '0');
+        return closeDateStr === exportDate;
+      }
+      if (exportType === 'monthly') {
+        const closeMonthStr = closeDate.getFullYear() + '-' +
+          String(closeDate.getMonth() + 1).padStart(2, '0');
+        return closeMonthStr === exportMonth;
+      }
+      if (exportType === 'annual') {
+        return closeDate.getFullYear().toString() === exportYear;
+      }
+      return true;
+    });
+  };
+
+  // Obtener texto descriptivo del filtro de exportación
+  const getExportLabel = () => {
+    if (exportType === 'last') {
+      if (closes.length > 0) {
+        const last = closes[0];
+        return `Último cierre: ${formatDateTime(last.closingDate)}`;
+      }
+      return 'Último cierre (no disponible)';
+    }
+    if (exportType === 'daily') return `Día: ${exportDate}`;
+    if (exportType === 'monthly') return `Mes: ${exportMonth}`;
+    if (exportType === 'annual') return `Año: ${exportYear}`;
+    return 'Todos';
+  };
+
   // Generar PDF
-  const generatePDF = () => {
-    const filterLabel = filterType === 'daily' ? `Día: ${selectedDate}` 
-      : filterType === 'monthly' ? `Mes: ${selectedMonth}` 
-      : filterType === 'annual' ? `Año: ${selectedYear}` 
-      : 'Todos';
+  const generatePDF = (closesToExport, label) => {
+    if (!closesToExport || closesToExport.length === 0) {
+      alert('No hay cierres de caja para exportar con el filtro seleccionado.');
+      return;
+    }
+
+    const pdfTotalSales = closesToExport.reduce((sum, c) => sum + parseFloat(c.totalSales || 0), 0);
+    const pdfTotalTransactions = closesToExport.reduce((sum, c) => sum + (c.totalTransactions || 0), 0);
+    const pdfTotalDifference = closesToExport.reduce((sum, c) => sum + parseFloat(c.difference || 0), 0);
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -129,25 +186,25 @@ const CashRegister = () => {
         <div class="header">
           <h1>🍕 Mr. Panzo - Restaurante</h1>
           <h2>Reporte de Cierres de Caja</h2>
-          <p>Filtro: ${filterLabel} | Generado: ${new Date().toLocaleString('es-CO')}</p>
+          <p>Filtro: ${label} | Generado: ${new Date().toLocaleString('es-CO')}</p>
         </div>
 
         <div class="summary">
           <div class="summary-item">
             <h3>Total Cierres</h3>
-            <p>${filteredCloses.length}</p>
+            <p>${closesToExport.length}</p>
           </div>
           <div class="summary-item">
             <h3>Total Ventas</h3>
-            <p>${formatCurrency(totalSales)}</p>
+            <p>${formatCurrency(pdfTotalSales)}</p>
           </div>
           <div class="summary-item">
             <h3>Transacciones</h3>
-            <p>${totalTransactions}</p>
+            <p>${pdfTotalTransactions}</p>
           </div>
           <div class="summary-item">
             <h3>Diferencia</h3>
-            <p class="${totalDifference >= 0 ? 'positive' : 'negative'}">${formatCurrency(totalDifference)}</p>
+            <p class="${pdfTotalDifference >= 0 ? 'positive' : 'negative'}">${formatCurrency(pdfTotalDifference)}</p>
           </div>
         </div>
 
@@ -159,18 +216,20 @@ const CashRegister = () => {
               <th>Monto Inicial</th>
               <th>Monto Final</th>
               <th>Total Ventas</th>
+              <th>Transacciones</th>
               <th>Diferencia</th>
               <th>Cerrado por</th>
             </tr>
           </thead>
           <tbody>
-            ${filteredCloses.map(c => `
+            ${closesToExport.map(c => `
               <tr>
                 <td>${c.id}</td>
                 <td>${formatDateTime(c.closingDate)}</td>
                 <td>${formatCurrency(c.initialAmount)}</td>
                 <td>${formatCurrency(c.finalAmount)}</td>
                 <td>${formatCurrency(c.totalSales)}</td>
+                <td>${c.totalTransactions || 0}</td>
                 <td class="${parseFloat(c.difference || 0) >= 0 ? 'positive' : 'negative'}">${formatCurrency(c.difference)}</td>
                 <td>${c.closedBy || 'N/A'}</td>
               </tr>
@@ -193,6 +252,13 @@ const CashRegister = () => {
     };
   };
 
+  const handleExportPDF = () => {
+    const closesToExport = getExportCloses();
+    const label = getExportLabel();
+    generatePDF(closesToExport, label);
+    setShowExportModal(false);
+  };
+
   const columns = [
     { header: 'ID', field: 'id' },
     { 
@@ -212,15 +278,22 @@ const CashRegister = () => {
       render: (item) => formatCurrency(item.totalSales)
     },
     { 
+      header: 'Transacciones', 
+      render: (item) => item.totalTransactions || 0
+    },
+    { 
       header: 'Diferencia', 
-      render: (item) => (
-        <span style={{ 
-          color: getDifferenceColor(item.difference),
-          fontWeight: 'bold'
-        }}>
-          {formatCurrency(item.difference)}
-        </span>
-      )
+      render: (item) => {
+        const diff = parseFloat(item.finalAmount || 0) - parseFloat(item.initialAmount || 0) - parseFloat(item.totalSales || 0);
+        return (
+          <span style={{ 
+            color: getDifferenceColor(diff),
+            fontWeight: 'bold'
+          }}>
+            {formatCurrency(diff)}
+          </span>
+        );
+      }
     },
     { header: 'Cerrado por', field: 'closedBy' },
   ];
@@ -274,15 +347,15 @@ const CashRegister = () => {
           title={<><CashRegisterIcon size={24} /> Cierres de Caja</>}
           actions={
             <button
-              onClick={generatePDF}
-              disabled={filteredCloses.length === 0}
+              onClick={() => setShowExportModal(true)}
+              disabled={closes.length === 0}
               style={{
                 padding: '10px 20px',
-                backgroundColor: filteredCloses.length === 0 ? '#ccc' : '#007bff',
+                backgroundColor: closes.length === 0 ? '#ccc' : '#007bff',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: filteredCloses.length === 0 ? 'not-allowed' : 'pointer',
+                cursor: closes.length === 0 ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 display: 'flex',
@@ -439,11 +512,15 @@ const CashRegister = () => {
                 <div>
                   <strong>Diferencia:</strong>
                   <div style={{ 
-                    color: getDifferenceColor(selectedClose.difference),
+                    color: getDifferenceColor(
+                      parseFloat(selectedClose.finalAmount || 0) - parseFloat(selectedClose.initialAmount || 0) - parseFloat(selectedClose.totalSales || 0)
+                    ),
                     fontWeight: 'bold',
                     fontSize: '1.2em'
                   }}>
-                    {formatCurrency(selectedClose.difference)}
+                    {formatCurrency(
+                      parseFloat(selectedClose.finalAmount || 0) - parseFloat(selectedClose.initialAmount || 0) - parseFloat(selectedClose.totalSales || 0)
+                    )}
                   </div>
                 </div>
               </div>
@@ -462,6 +539,123 @@ const CashRegister = () => {
               )}
             </div>
           )}
+        </Modal>
+
+        {/* Modal de exportación PDF */}
+        <Modal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          title="📄 Exportar Reporte PDF"
+          size="medium"
+          onConfirm={handleExportPDF}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <p style={{ color: '#555', margin: 0 }}>
+              Seleccione el tipo de reporte que desea exportar como PDF:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ 
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', 
+                border: exportType === 'last' ? '2px solid #007bff' : '1px solid #ddd',
+                borderRadius: '8px', cursor: 'pointer',
+                backgroundColor: exportType === 'last' ? '#e3f2fd' : '#fff',
+              }}>
+                <input type="radio" name="exportType" value="last" checked={exportType === 'last'} onChange={() => setExportType('last')} />
+                <div>
+                  <strong>🕐 Último cierre de caja</strong>
+                  {closes.length > 0 && (
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                      {formatDateTime(closes[0].closingDate)} — por {closes[0].closedBy || 'N/A'}
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              <label style={{ 
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                border: exportType === 'daily' ? '2px solid #007bff' : '1px solid #ddd',
+                borderRadius: '8px', cursor: 'pointer',
+                backgroundColor: exportType === 'daily' ? '#e3f2fd' : '#fff',
+              }}>
+                <input type="radio" name="exportType" value="daily" checked={exportType === 'daily'} onChange={() => setExportType('daily')} />
+                <div style={{ flex: 1 }}>
+                  <strong>📅 Día específico</strong>
+                  {exportType === 'daily' && (
+                    <div style={{ marginTop: '8px' }}>
+                      <input
+                        type="date"
+                        value={exportDate}
+                        onChange={(e) => setExportDate(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              <label style={{ 
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                border: exportType === 'monthly' ? '2px solid #007bff' : '1px solid #ddd',
+                borderRadius: '8px', cursor: 'pointer',
+                backgroundColor: exportType === 'monthly' ? '#e3f2fd' : '#fff',
+              }}>
+                <input type="radio" name="exportType" value="monthly" checked={exportType === 'monthly'} onChange={() => setExportType('monthly')} />
+                <div style={{ flex: 1 }}>
+                  <strong>📆 Mes específico</strong>
+                  {exportType === 'monthly' && (
+                    <div style={{ marginTop: '8px' }}>
+                      <input
+                        type="month"
+                        value={exportMonth}
+                        onChange={(e) => setExportMonth(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              <label style={{ 
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                border: exportType === 'annual' ? '2px solid #007bff' : '1px solid #ddd',
+                borderRadius: '8px', cursor: 'pointer',
+                backgroundColor: exportType === 'annual' ? '#e3f2fd' : '#fff',
+              }}>
+                <input type="radio" name="exportType" value="annual" checked={exportType === 'annual'} onChange={() => setExportType('annual')} />
+                <div style={{ flex: 1 }}>
+                  <strong>📊 Año específico</strong>
+                  {exportType === 'annual' && (
+                    <div style={{ marginTop: '8px' }}>
+                      <select
+                        value={exportYear}
+                        onChange={(e) => setExportYear(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px', minWidth: '100px' }}
+                      >
+                        {yearOptions.map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </label>
+            </div>
+
+            <div style={{ 
+              padding: '10px 15px', 
+              backgroundColor: '#f0f8ff', 
+              borderRadius: '6px', 
+              fontSize: '13px',
+              color: '#333',
+              border: '1px solid #b3d9ff'
+            }}>
+              <strong>Exportará:</strong> {getExportLabel()} — {getExportCloses().length} cierre(s) encontrado(s)
+            </div>
+          </div>
         </Modal>
       </div>
     </Layout>

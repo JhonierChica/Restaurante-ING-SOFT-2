@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/profiles")
-@CrossOrigin(origins = "*")
 public class ProfileController {
 
     private final ProfileService profileService;

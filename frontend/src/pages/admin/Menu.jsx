@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
-import Table from '../../components/common/Table';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
@@ -125,24 +124,6 @@ const Menu = () => {
     const category = categories.find(c => c.id === categoryId);
     return category ? category.name : 'N/A';
   };
-
-  const columns = [
-    { header: 'ID', field: 'id' },
-    { header: 'Nombre', field: 'name' },
-    { header: 'Descripción', field: 'description' },
-    { 
-      header: 'Precio', 
-      render: (row) => `$${parseFloat(row.price).toFixed(2)}` 
-    },
-    { 
-      header: 'Categoría', 
-      render: (row) => getCategoryName(row.categoryId) 
-    },
-    { 
-      header: 'Disponible', 
-      render: (row) => row.available ? '✅' : '❌' 
-    },
-  ];
 
   if (loading) return <Loading message="Cargando menú..." />;
 

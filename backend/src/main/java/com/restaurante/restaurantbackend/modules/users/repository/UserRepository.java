@@ -2,6 +2,8 @@ package com.restaurante.restaurantbackend.modules.users.repository;
 
 import com.restaurante.restaurantbackend.modules.users.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,4 +21,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByActiveTrue();
     
     Optional<User> findByEmployeeId(Long employeeId);
+
+    /**
+     * Fetch all users whose employee ID is in the given set.
+     * Avoids N+1 when mapping multiple employees to their user data.
+     */
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.profile p LEFT JOIN FETCH p.permissions WHERE u.employee.id IN :employeeIds")
+    List<User> findByEmployeeIdIn(@Param("employeeIds") List<Long> employeeIds);
 }

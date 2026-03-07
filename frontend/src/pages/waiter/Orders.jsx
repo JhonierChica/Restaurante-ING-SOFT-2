@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
-import Table from '../../components/common/Table';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
@@ -300,14 +299,6 @@ const Orders = () => {
             notes: formData.notes,
           };
           
-          console.log('=== SENDING ORDER DATA ===');
-          console.log('Order Type:', orderType);
-          console.log('User ID:', user?.id);
-          console.log('Table ID:', tableIdToUse);
-          console.log('Client ID:', clientId);
-          console.log('Items:', selectedItems);
-          console.log('Full orderData:', JSON.stringify(orderData, null, 2));
-          
           await orderService.createOrder(orderData);
           
           if (orderType === 'DOMICILIO') {
@@ -538,29 +529,6 @@ const Orders = () => {
     };
     return badges[status] || { emoji: '', text: status, class: 'badge-secondary' };
   };
-
-  const columns = [
-    { header: 'ID', field: 'id' },
-    { 
-      header: 'Mesa', 
-      render: (row) => `Mesa ${row.tableNumber || 'N/A'}` 
-    },
-    { 
-      header: 'Cliente', 
-      render: (row) => row.clientName || 'N/A'
-    },
-    { 
-      header: 'Estado', 
-      render: (row) => {
-        const badge = getStatusBadge(row.status);
-        return `${badge.emoji} ${badge.text}`;
-      }
-    },
-    { 
-      header: 'Total', 
-      render: (row) => `$${parseFloat(row.total || 0).toFixed(2)}` 
-    },
-  ];
 
   const calculateOrderTotal = (items) => {
     if (!items || items.length === 0) return 0;

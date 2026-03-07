@@ -13,7 +13,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/positions")
-@CrossOrigin(origins = "*")
 public class PositionController {
 
     private final PositionService positionService;
@@ -60,8 +59,8 @@ public class PositionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePosition(@PathVariable Long id) {
-        positionService.deletePosition(id);
+    public ResponseEntity<Void> deactivatePosition(@PathVariable Long id) {
+        positionService.deactivatePosition(id);
         return ResponseEntity.noContent().build();
     }
 }
