@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment-methods")
@@ -63,12 +65,18 @@ public class PaymentMethodController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePaymentMethod(@PathVariable Long id) {
+    public ResponseEntity<?> deletePaymentMethod(@PathVariable Long id) {
         try {
             paymentMethodService.deletePaymentMethod(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.notFound().build();
+            }
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "No se puede eliminar el método de pago. Es posible que tenga registros asociados.");
+            error.put("details", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
         }
     }
 
